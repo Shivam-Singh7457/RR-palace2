@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /api/
+Disallow: /booking/
+Allow: /
+
+Sitemap: https://rr-palace2.vercel.app/sitemap.xml
