@@ -120,7 +120,7 @@ const RoomDetails = () => {
                         </div>
                     ))}
                 </div>
-                <div className="text-2xl font-semibold text-gray-800">${room.pricePerNight} / night</div>
+                <div className="text-2xl font-semibold text-gray-800"> ₹ {room.pricePerNight} / night</div>
             </div>
 
             {/* Availability Form */}
@@ -165,23 +165,6 @@ const RoomDetails = () => {
             <div className="max-w-3xl border-y border-gray-300 my-12 py-6 text-sm text-gray-600">
                 Guests are allocated rooms as per availability.
             </div>
-
-            {/* Host Info */}
-            <div className="flex items-start gap-4 mt-8">
-                <img src={room.hotel.owner.image} alt="owner" className="h-16 w-16 rounded-full object-cover" />
-                <div>
-                    <p className="text-lg font-medium">Hosted by {room.hotel.name}</p>
-                    <div className="flex items-center mt-1">
-                        <StarRating />
-                        <p className="text-sm text-gray-500 ml-2">200+ reviews</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Contact Button */}
-            <button className="mt-4 px-6 py-2 rounded bg-primary text-white hover:bg-primary-dull transition">
-                Contact Now
-            </button>
         </div>
     );
 };

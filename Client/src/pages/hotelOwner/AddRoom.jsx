@@ -93,10 +93,10 @@ const AddRoom=()=>{
                     <select onChange={e=>setInputs({...inputs,roomType: e.target.value})} 
                         className='border opacity-70 border-gray-300 mt-1 rounded p-2 w-full'>
                         <option value="">Select Room Type</option>
-                        <option value="Single Bed">Single Bed</option>
-                        <option value="Single Bed With AC">Single Bed With AC</option>
                         <option value="Double Bed">Double Bed</option>
-                        <option value="Double Bed with AC">Double Bed With AC</option>
+                        <option value="Double Bed with AC">Double Bed with AC</option>
+                        <option value="Twin Double Bed">Twin Double Bed</option>
+                        <option value="Twin Double Bed with AC">Twin Double Bed with AC</option>
                     </select>
                 </div>
                 <div>

@@ -94,17 +94,22 @@ const ListRooms = () => {
                 {currency} {item.pricePerNight}
                 </td>
                 <td className="py-3 px-4 border-t border-gray-300 text-sm text-center">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={item.isAvailable}
-                      onChange={() => toggleAvailability(item._id)}
-                    />
-                    <div className="w-12 h-7 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition-colors duration-300 relative">
-                      <span className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform duration-300 ease-in-out peer-checked:translate-x-5"></span>
-                    </div>
-                  </label>
+                  <div className="flex flex-col items-center">
+                    <label className="relative inline-flex items-center cursor-pointer mb-1">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={item.isAvailable}
+                        onChange={() => toggleAvailability(item._id)}
+                      />
+                      <div className="w-12 h-7 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition-colors duration-300 relative">
+                        <span className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform duration-300 ease-in-out peer-checked:translate-x-5"></span>
+                      </div>
+                    </label>
+                    <span className={`text-xs ${item.isAvailable ? "text-green-600" : "text-red-500"}`}>
+                      {item.isAvailable ? "Available" : "Booking Off"}
+                    </span>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
+import heroImage from "../assets/heroImage.jpg";
 
 const Hero = () => {
   const [checkIn, setCheckIn] = useState("");
@@ -18,7 +19,7 @@ const Hero = () => {
   return (
     <div
       className="relative h-screen bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url("/src/assets/heroImage.jpg")' }}
+      style={{ backgroundImage: `url(${heroImage})` }}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 z-0" />

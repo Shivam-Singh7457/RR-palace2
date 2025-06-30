@@ -77,15 +77,18 @@ const Navbar = () => {
         {/* Desktop Right Icons */}
         <div className="hidden md:flex items-center gap-4">
           {user ? (
-            <UserButton>
-              <UserButton.MenuItems>
-                <UserButton.Action
-                  label="My Bookings"
-                  labelIcon={<BookIcon />}
-                  onClick={() => navigate("/my-bookings")}
-                />
-              </UserButton.MenuItems>
-            </UserButton>
+            <>
+              <button
+                onClick={() => navigate("/my-bookings")}
+                className={`flex items-center gap-2 text-sm px-4 py-1 border rounded-full ${
+                  isScrolled ? "text-black border-gray-300" : "text-white border-white/70"
+                } hover:bg-gray-100 hover:text-black transition`}
+              >
+                <BookIcon />
+                My Bookings
+              </button>
+              <UserButton />
+            </>
           ) : (
             <button
               onClick={openSignIn}
@@ -99,15 +102,7 @@ const Navbar = () => {
         {/* Mobile Icons */}
         <div className="md:hidden flex items-center gap-3">
           {user && (
-            <UserButton>
-              <UserButton.MenuItems>
-                <UserButton.Action
-                  label="My Bookings"
-                  labelIcon={<BookIcon />}
-                  onClick={() => navigate("/my-bookings")}
-                />
-              </UserButton.MenuItems>
-            </UserButton>
+            <UserButton />
           )}
           <img
             src={assets.menuIcon}
@@ -134,16 +129,30 @@ const Navbar = () => {
           </Link>
         ))}
 
-        {user && isOwner && (
-          <button
-            className="border px-4 py-1 text-sm font-light rounded-full cursor-pointer"
-            onClick={() => {
-              setIsMenuOpen(false);
-              navigate("/owner");
-            }}
-          >
-            Dashboard
-          </button>
+        {user && (
+          <>
+            <button
+              className="border px-4 py-1 text-sm font-light rounded-full cursor-pointer"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate("/my-bookings");
+              }}
+            >
+              My Bookings
+            </button>
+
+            {isOwner && (
+              <button
+                className="border px-4 py-1 text-sm font-light rounded-full cursor-pointer"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  navigate("/owner");
+                }}
+              >
+                Dashboard
+              </button>
+            )}
+          </>
         )}
 
         {!user && (

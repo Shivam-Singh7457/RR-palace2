@@ -1,7 +1,8 @@
 import Booking from "../models/Booking.js";
 import Room from "../models/Rooms.js";
-import Hotel from "../models/Hotel.js";
 import transporter from "../configs/nodemailer.js";
+import User from "../models/User.js";
+import { isOwnerOrCoOwner } from "../utils/ownership.js";
 
 const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
   try {
@@ -28,23 +29,31 @@ export const checkAvailabilityAPI = async (req, res) => {
   }
 };
 
+
 export const createBooking = async (req, res) => {
   try {
     if (!req.user || !req.user._id) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res.status(401).json({ success: false, message: "User not authenticated..Please Login First" });
     }
 
     const { room, checkInDate, checkOutDate, guests } = req.body;
     const user = req.user._id;
 
-    const isAvailable = await checkAvailability({ checkInDate, checkOutDate, room });
-    if (!isAvailable) {
-      return res.json({ success: false, message: "Room is not available" });
-    }
-
     const roomData = await Room.findById(room).populate("hotel");
     if (!roomData) {
       return res.status(404).json({ success: false, message: "Room not found" });
+    }
+    if (!roomData.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: "Room booking is currently off for this room by the owner. Please try other options.",
+      });
+    }
+
+    
+    const isAvailable = await checkAvailability({ checkInDate, checkOutDate, room });
+    if (!isAvailable) {
+      return res.json({ success: false, message: "Room is not available" });
     }
 
     let totalPrice = roomData.pricePerNight;
@@ -110,33 +119,36 @@ export const getUserBookings = async (req, res) => {
   }
 };
 
+
+
 export const getHotelBookings = async (req, res) => {
   try {
-    const hotel = await Hotel.findOne({ owner: req.auth.userId });
+    const userId = req.auth.userId;
 
-    if (!hotel) {
-      return res.json({ success: false, message: "No hotel found" });
+    if (!isOwnerOrCoOwner(userId)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    const bookings = await Booking.find({ hotel: hotel._id })
-      .populate("room hotel user")
+    const bookings = await Booking.find({})
+      .populate("user")
+      .populate("room")
       .sort({ createdAt: -1 });
 
-    const totalBookings = bookings.length;
-    const totalRevenue = bookings.reduce((acc, booking) => acc + booking.totalPrice, 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
 
     res.json({
       success: true,
       dashboardData: {
-        totalBookings,
-        totalRevenue,
         bookings,
+        totalBookings: bookings.length,
+        totalRevenue,
       },
     });
-  } catch (error) {
-    res.json({ success: false, message: "Failed to fetch hotel bookings" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to fetch dashboard data" });
   }
 };
+
 
 export const submitUPIReference = async (req, res) => {
   try {
@@ -162,6 +174,12 @@ export const submitUPIReference = async (req, res) => {
 
 export const getAllBookingsForAdmin = async (req, res) => {
   try {
+    const userId = req.auth.userId;
+
+    if (!isOwnerOrCoOwner(userId)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     const { status, isPaid, search, checkInDate } = req.query;
 
     const filter = {};
@@ -200,8 +218,15 @@ export const getAllBookingsForAdmin = async (req, res) => {
   }
 };
 
+
 export const markAsPaid = async (req, res) => {
   try {
+    const userId = req.auth.userId;
+
+    if (!isOwnerOrCoOwner(userId)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     const booking = await Booking.findById(req.params.bookingId)
       .populate("room")
       .populate("hotel")
@@ -219,7 +244,7 @@ export const markAsPaid = async (req, res) => {
       from: process.env.SENDER_EMAIL,
       to: booking.user.email,
       subject: "Payment Confirmed – RR Palace",
-      html: `
+      html:`
         <h2>Payment Confirmation</h2>
         <p>Dear ${booking.user.username},</p>
         <p>We have received your payment successfully.</p>
@@ -231,8 +256,8 @@ export const markAsPaid = async (req, res) => {
           <li><strong>Check-Out:</strong> ${new Date(booking.checkOutDate).toDateString()}</li>
           <li><strong>Amount Paid:</strong> ₹ ${booking.totalPrice}</li>
         </ul>
-        <p>Thank you for choosing us. We look forward to your stay!</p>
-      `,
+        <p>Thank you for choosing us. We look forward to your stay!</p>`
+      ,
     };
 
     await transporter.sendMail(mailOptions);
@@ -244,8 +269,15 @@ export const markAsPaid = async (req, res) => {
   }
 };
 
+
 export const markAsUnpaid = async (req, res) => {
   try {
+    const userId = req.auth.userId;
+
+    if (!isOwnerOrCoOwner(userId)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     const booking = await Booking.findById(req.params.bookingId);
     if (!booking)
       return res.status(404).json({ success: false, message: "Booking not found" });
@@ -261,8 +293,15 @@ export const markAsUnpaid = async (req, res) => {
   }
 };
 
+
 export const deleteBooking = async (req, res) => {
   try {
+    const userId = req.auth.userId;
+
+    if (!isOwnerOrCoOwner(userId)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     const booking = await Booking.findById(req.params.bookingId)
       .populate("user")
       .populate("room")
@@ -272,24 +311,25 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    const mailOptions = {
+     const mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: booking.user.email,
       subject: "Booking Rejected – RR Palace",
       html: `
-        <h2>Your Booking Has Been Rejected</h2>
-        <p>Dear ${booking.user.username},</p>
-        <p>We're sorry to inform you that your booking has been rejected.</p>
-        <ul>
-          <li><strong>Booking ID:</strong> ${booking._id}</li>
-          <li><strong>Hotel:</strong> ${booking.hotel.name}</li>
-          <li><strong>Room:</strong> ${booking.room.roomType}</li>
-          <li><strong>Check-In:</strong> ${new Date(booking.checkInDate).toDateString()}</li>
-          <li><strong>Check-Out:</strong> ${new Date(booking.checkOutDate).toDateString()}</li>
-        </ul>
-        <p>If you have any questions, feel free to contact us.</p>
-      `,
+          <h2>Your Booking Has Been Rejected</h2>
+          <p>Dear ${booking.user.username},</p>
+          <p>We're sorry to inform you that your booking has been rejected.</p>
+          <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Hotel:</strong> ${booking.hotel.name}</li>
+            <li><strong>Room:</strong> ${booking.room.roomType}</li>
+            <li><strong>Check-In:</strong> ${new Date(booking.checkInDate).toDateString()}</li>
+            <li><strong>Check-Out:</strong> ${new Date(booking.checkOutDate).toDateString()}</li>
+          </ul>
+          <p>If you have any questions, feel free to contact us.</p>`
+      ,
     };
+
 
     await transporter.sendMail(mailOptions);
 
@@ -301,6 +341,7 @@ export const deleteBooking = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to delete booking" });
   }
 };
+
 
 export const cancelBookingByUser = async (req, res) => {
   try {
