@@ -6,7 +6,7 @@
 
 ### Main Dashboard
 <!-- ADD YOUR MAIN PAGE SCREENSHOT HERE -->
-![Main Page Dashboard](heroImage.jpg)
+![Main Page Dashboard](Client/public/heroImage.jpg)
 
 ---
 
