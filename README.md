@@ -1,21 +1,20 @@
 # 🏰 RR Palace - Luxury Redefined
 
-![RR Palace Banner](https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200)
-> *Experience the pinnacle of hospitality where royalty meets modern elegance.*
-
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://rr-palace2.vercel.app/)
-[![Hosting](https://img.shields.io/badge/Hosted%20On-Google-blue?style=for-the-badge&logo=google-cloud)](https://rr-palace2.vercel.app/)
-[![License](https://img.shields.io/badge/License-ISC-gold?style=for-the-badge)](https://opensource.org/licenses/ISC)
-
 ---
 
 ## 📸 Preview
 
 ### Main Dashboard
 <!-- ADD YOUR MAIN PAGE SCREENSHOT HERE -->
-![Main Page Dashboard](RR-palace2\Client\public\heroImage.jpg)
+![Main Page Dashboard](heroImage.jpg)
 
 ---
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://rr-palace2.vercel.app/)
+[![Hosting](https://img.shields.io/badge/Hosted%20On-Google-blue?style=for-the-badge&logo=google-cloud)](https://rr-palace2.vercel.app/)
+[![License](https://img.shields.io/badge/License-ISC-gold?style=for-the-badge)](https://opensource.org/licenses/ISC)
+
+
 
 ## ✨ Unique Features
 
