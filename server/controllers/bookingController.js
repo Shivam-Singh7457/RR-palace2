@@ -1,28 +1,16 @@
+import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import Room from "../models/Rooms.js";
 import transporter from "../configs/nodemailer.js";
 import User from "../models/User.js";
 import { isOwnerOrCoOwner } from "../utils/ownership.js";
+import { createBookingService, checkRoomAvailability } from "../services/bookingService.js";
 
-const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
-  try {
-    const bookings = await Booking.find({
-      room,
-      checkInDate: { $lte: checkOutDate },
-      checkOutDate: { $gte: checkInDate },
-      status: { $nin: ["cancelled"] }, // ✅ Ignore cancelled/rejected
-    });
-    return bookings.length === 0;
-  } catch (error) {
-    console.log("Availability check error:", error.message);
-    return false;
-  }
-};
 
 export const checkAvailabilityAPI = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate } = req.body;
-    const isAvailable = await checkAvailability({ checkInDate, checkOutDate, room });
+    const isAvailable = await checkRoomAvailability({ checkInDate, checkOutDate, room });
     res.json({ success: true, isAvailable });
   } catch (error) {
     res.json({ success: false, message: error.message });
@@ -31,6 +19,8 @@ export const checkAvailabilityAPI = async (req, res) => {
 
 
 export const createBooking = async (req, res) => {
+  let createdBookingId = null;
+  
   try {
     if (!req.user || !req.user._id) {
       return res.status(401).json({ success: false, message: "User not authenticated..Please Login First" });
@@ -39,40 +29,15 @@ export const createBooking = async (req, res) => {
     const { room, checkInDate, checkOutDate, guests } = req.body;
     const user = req.user._id;
 
-    const roomData = await Room.findById(room).populate("hotel");
-    if (!roomData) {
-      return res.status(404).json({ success: false, message: "Room not found" });
-    }
-    if (!roomData.isAvailable) {
-      return res.status(400).json({
-        success: false,
-        message: "Room booking is currently off for this room by the owner. Please try other options.",
-      });
-    }
-
-    
-    const isAvailable = await checkAvailability({ checkInDate, checkOutDate, room });
-    if (!isAvailable) {
-      return res.json({ success: false, message: "Room is not available" });
-    }
-
-    let totalPrice = roomData.pricePerNight;
-
-    const checkIn = new Date(checkInDate);
-    const checkOut = new Date(checkOutDate);
-    const timeDiff = checkOut.getTime() - checkIn.getTime();
-    const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    totalPrice *= nights;
-
-    const booking = await Booking.create({
+    const { booking, roomData } = await createBookingService({
       user,
       room,
-      hotel: roomData.hotel._id,
-      guests: +guests,
       checkInDate,
       checkOutDate,
-      totalPrice,
+      guests,
     });
+
+    createdBookingId = booking._id;
 
     const mailOptions = {
       from: process.env.SENDER_EMAIL,
@@ -95,12 +60,21 @@ export const createBooking = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    // Try sending email
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (mailError) {
+      // Manual Rollback: Delete the booking if email fails
+      if (createdBookingId) {
+        await Booking.findByIdAndDelete(createdBookingId);
+      }
+      throw new Error(`Booking failed because confirmation email could not be sent: ${mailError.message}`);
+    }
 
     res.json({ success: true, message: "Booking created successfully", booking });
   } catch (error) {
     console.error("Create booking error:", error);
-    res.json({ success: false, message: "Booking creation failed" });
+    res.json({ success: false, message: error.message || "Booking creation failed" });
   }
 };
 

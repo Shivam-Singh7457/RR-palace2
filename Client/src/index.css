@@ -14,3 +14,39 @@
 .font-playfair{
   font-family: Playfair !important;
 }
+
+/* Premium Button Styling */
+.btn-premium {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 2rem;
+  border-radius: 9999px;
+  border: 1.5px solid #b8860b;
+  color: #b8860b;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.btn-premium:hover:not(:disabled) {
+  background-color: #b8860b;
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(184, 134, 11, 0.2);
+}
+
+.btn-premium:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.btn-premium:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  background-color: #f3f4f6;
+  transform: scale(0.98);
+}

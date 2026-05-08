@@ -25,23 +25,23 @@ const Hero = () => {
       <div className="absolute inset-0 bg-black/50 z-0" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-start justify-center h-full px-6 md:px-16 lg:px-24 xl:px-32 text-white">
-        <p className="bg-[#FFD700]/90 text-black px-4 py-1 rounded-full text-sm">
+      <div className="relative z-10 flex flex-col items-center md:items-start justify-center h-full px-6 md:px-16 lg:px-24 xl:px-32 text-white text-center md:text-left pt-20">
+        <p className="bg-[#FFD700]/90 text-black px-4 py-1 rounded-full text-xs md:text-sm font-medium">
           Royal Rudraksh Palace – Varanasi
         </p>
 
-        <h1 className="font-playfair text-3xl md:text-5xl font-extrabold leading-tight max-w-xl mt-4">
+        <h1 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight max-w-2xl mt-4">
           Where timeless tradition meets modern luxury
         </h1>
 
-        <p className="text-sm md:text-base max-w-lg mt-4">
+        <p className="text-xs sm:text-sm md:text-base max-w-lg mt-4 text-white/90 leading-relaxed">
           Located near the sacred Ganges and Kashi Vishwanath Temple, our palace-style hotel offers a peaceful stay with elegant rooms, warm hospitality, and a true taste of Varanasi’s spiritual charm.
         </p>
 
         {/* Search Form */}
         <form
           onSubmit={onSearch}
-          className="bg-white text-gray-800 rounded-xl px-6 py-5 mt-8 flex flex-col md:flex-row items-stretch gap-4 w-full max-w-4xl shadow-lg border-[2px] border-[#FFD700]"
+          className="bg-white text-gray-800 rounded-2xl p-4 md:px-6 md:py-5 mt-8 flex flex-col lg:flex-row items-stretch gap-4 w-full max-w-5xl shadow-2xl border-[2px] border-[#FFD700]/30"
         >
           {/* Check In */}
           <div className="flex-1">
@@ -83,7 +83,7 @@ const Hero = () => {
               max={4}
               value={guests}
               onChange={(e) => setGuests(e.target.value)}
-              className="w-24 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#FFD700]"
+              className="w-full md:w-24 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#FFD700]"
             />
           </div>
 

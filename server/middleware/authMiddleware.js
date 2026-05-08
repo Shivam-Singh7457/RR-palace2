@@ -1,46 +1,39 @@
 import User from "../models/User.js";
-import { clerkClient } from "@clerk/clerk-sdk-node";
+import jwt from "jsonwebtoken";
 
 export const protect = async (req, res, next) => {
-  const { userId: clerkId } = req.auth;
+  let token;
 
-  if (!clerkId) {
-    return res.status(401).json({ success: false, message: "Not authenticated" });
+  // Check for token in Authorization header (Bearer <token>)
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  } 
+  // Check for token in cookies
+  else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Not authorized, no token" });
   }
 
   try {
-    let user = await User.findById(clerkId);
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!user) {
-      console.log(`Creating new user: ${clerkId}`);
+    // Get user from token
+    req.user = await User.findById(decoded.id).select("-password");
 
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-
-      // ✅ Safe access
-      const firstName = clerkUser.firstName || "";
-      const lastName = clerkUser.lastName || "";
-      const fullName = `${firstName} ${lastName}`.trim() || "New Clerk User";
-
-      const email =
-        clerkUser.emailAddresses?.[0]?.emailAddress || `${clerkId}@example.com`;
-
-      const image =
-        clerkUser.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}`;
-
-      user = await User.create({
-        _id: clerkUser.id,
-        username: fullName,
-        email,
-        image,
-        role: "user",
-        recentSearchedCities: [],
-      });
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: "User not found" });
     }
 
-    req.user = user;
+    // Support legacy req.auth for compatibility with controllers that use req.auth.userId
+    req.auth = { userId: req.user._id.toString() };
+
     next();
   } catch (err) {
     console.error("Auth middleware error:", err);
-    res.status(500).json({ success: false, message: "Failed to authenticate user" });
+    res.status(401).json({ success: false, message: "Not authorized, token failed" });
   }
 };

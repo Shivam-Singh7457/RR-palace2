@@ -1,41 +1,43 @@
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import passport from "passport";
 import connectDB from "./configs/db.js";
-import { clerkMiddleware } from "@clerk/express";
-import clerkWebhooks from "./controllers/clerkWebhooks.js";
-import userRouter from "./routes/userRoutes.js";
+import "./configs/passport.js"; // Initialize passport config
 import connectCloudinary from "./configs/cloudinary.js";
+import userRouter from "./routes/userRoutes.js";
 import roomRouter from "./routes/roomRoutes.js";
 import bookingRouter from "./routes/bookingRoutes.js";
 import amenitiesRoutes from "./routes/amenitiesRoutes.js";
+import reviewRouter from "./routes/reviewRoutes.js";
+import authRouter from "./routes/authRoutes.js";
+import { initCleanupTask } from "./utils/cleanupTask.js";
 
 // ✅ Initialize DB and Cloudinary
 connectDB();
 connectCloudinary();
+initCleanupTask();
 
 const app = express();
-app.use(cors());
-
-// 🔁 Use raw parser ONLY for Clerk Webhook
-app.use("/api/clerk", clerkWebhooks);
-
-// ✅ JSON body for other routes
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true
+}));
 app.use(express.json());
-app.use(clerkMiddleware());
-
-
-
-
+app.use(cookieParser());
+app.use(passport.initialize());
 
 // ✅ Basic check route
 app.get("/", (req, res) => res.send("API is working"));
 
 // ✅ API Routes
+app.use("/api/auth", authRouter);
 app.use("/api/amenities", amenitiesRoutes);
 app.use("/api/user", userRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
+app.use("/api/reviews", reviewRouter);
 
 // ✅ Listen on Render-supplied port or default to 5000
 const port = process.env.PORT || 5000;

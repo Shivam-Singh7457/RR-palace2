@@ -1,6 +1,7 @@
 import Hotel from "../models/Hotel.js";
 import {v2 as cloudinary} from "cloudinary";
 import Room from "../models/Rooms.js";
+import Booking from "../models/Booking.js";
 
 export const createRoom= async (req,res)=>{
     try{
@@ -34,25 +35,26 @@ export const createRoom= async (req,res)=>{
     }
 }
 
-export const getRoom= async (req,res)=>{
-    try {
-        const rooms=await Room.find({isAvailable: true}).populate({
-            path: 'hotel' ,
-            populate:{
-                path:'owner',
-                select: 'image'
-            }
-        }).sort({createdAt: -1})
-        res.json({success:true,rooms});
-    } catch (error) {
-                res.json({success:false,message: error.message});
-
-    }
-}
-
-export const getTopViewedRooms = async (req, res) => {
+export const getRoom = async (req, res) => {
   try {
-    let topRooms = await Room.find({ isAvailable: true })
+    const { checkIn, checkOut } = req.query;
+
+    let bookedRooms = [];
+
+    if (checkIn && checkOut) {
+      const start = new Date(checkIn);
+      const end = new Date(checkOut);
+
+      // Find rooms that have overlapping bookings
+      bookedRooms = await Booking.find({
+        status: { $nin: ["cancelled"] },
+        $or: [
+          { checkInDate: { $lt: end }, checkOutDate: { $gt: start } }
+        ]
+      }).distinct("room");
+    }
+
+    const rooms = await Room.find({ isAvailable: true })
       .populate({
         path: "hotel",
         populate: {
@@ -60,26 +62,43 @@ export const getTopViewedRooms = async (req, res) => {
           select: "image",
         },
       })
-      .sort({ views: -1 })
-      .limit(3);
+      .sort({ createdAt: -1 });
 
-    if (topRooms.length === 0) {
-      // fallback: return the cheapest room
-      const cheapest = await Room.find({ isAvailable: true })
-        .sort({ pricePerNight: 1 })
-        .limit(1)
-        .populate({
-          path: "hotel",
-          populate: {
-            path: "owner",
-            select: "image",
-          },
-        });
+    // Map rooms to include booking status
+    const roomsWithStatus = rooms.map(room => ({
+      ...room.toObject(),
+      isBooked: false // or handle as before
+    }));
 
-      topRooms = cheapest;
-    }
+    res.json({ success: true, rooms: roomsWithStatus });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
 
-    res.json({ success: true, rooms: topRooms });
+export const getTopViewedRooms = async (req, res) => {
+  try {
+    const rooms = await Room.find({ isAvailable: true })
+      .populate({
+        path: "hotel",
+        populate: {
+          path: "owner",
+          select: "image",
+        },
+      })
+      .sort({ views: -1 });
+
+    // Group by roomType and pick the top viewed for each
+    const grouped = rooms.reduce((acc, room) => {
+      if (!acc[room.roomType]) {
+        acc[room.roomType] = room;
+      }
+      return acc;
+    }, {});
+
+    const uniqueTopRooms = Object.values(grouped).slice(0, 3);
+
+    res.json({ success: true, rooms: uniqueTopRooms });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }

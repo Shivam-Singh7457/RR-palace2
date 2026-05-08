@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 
 const Amenities = () => {
-  const { axios, getToken } = useAppContext();
+  const { axios, getToken, toast } = useAppContext();
   const [images, setImages] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const fetchAmenities = async () => {
     try {
@@ -18,12 +19,14 @@ const Amenities = () => {
   };
 
   const handleUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
     const formData = new FormData();
-    Array.from(e.target.files).forEach((file) =>
-      formData.append("images", file)
-    );
+    files.forEach((file) => formData.append("images", file));
 
     try {
+      setUploading(true);
       const token = await getToken();
       const res = await axios.post("/api/amenities/upload", formData, {
         headers: {
@@ -32,9 +35,17 @@ const Amenities = () => {
         },
       });
 
-      if (res.data.success) fetchAmenities();
+      if (res.data.success) {
+        toast.success("Memories uploaded successfully!");
+        fetchAmenities();
+      } else {
+        toast.error(res.data.message);
+      }
     } catch (error) {
+      toast.error("Upload failed. Please try again.");
       console.error("Upload failed:", error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -47,178 +58,119 @@ const Amenities = () => {
         },
       });
 
-      if (res.data.success) fetchAmenities();
+      if (res.data.success) {
+        toast.success("Memory deleted");
+        fetchAmenities();
+      }
     } catch (error) {
+      toast.error("Delete failed");
       console.error("Delete failed:", error.message);
     }
   };
 
   useEffect(() => {
     fetchAmenities();
+    scrollTo(0, 0);
   }, []);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.heading}>✨ Beautiful memories at RR Palace ✨</h2>
+    <div className="min-h-screen bg-gradient-to-br from-[#001f3f] to-black pt-32 pb-20 px-4 md:px-16 lg:px-24">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="text-center space-y-4 mb-16">
+          <h1 className="font-playfair text-4xl md:text-5xl text-[#b8860b] font-bold">
+            ✨ Beautiful Memories at RR Palace ✨
+          </h1>
+          <p className="text-gray-400 max-w-2xl mx-auto font-light italic">
+            "A collection of moments captured by our guests. Every corner of our palace tells a story of luxury and comfort."
+          </p>
 
-        {/* Small Upload Button */}
-        <div style={styles.smallUploadBox}>
-          <label htmlFor="upload-input" style={styles.smallUploadLabel}>
-            📤 Upload
-          </label>
-          <input
-            id="upload-input"
-            type="file"
-            multiple
-            onChange={handleUpload}
-            style={{ display: "none" }}
-          />
+          <div className="pt-4">
+            <label htmlFor="upload-input" className={`btn-premium cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  Uploading...
+                </div>
+              ) : (
+                "📤 Share Your Memory"
+              )}
+            </label>
+            <input
+              id="upload-input"
+              type="file"
+              multiple
+              onChange={handleUpload}
+              className="hidden"
+              accept="image/*"
+            />
+          </div>
         </div>
 
-        {/* Image Gallery */}
-        <div style={styles.gallery}>
-          {images.map((img, idx) => (
-            <div
-              key={idx}
-              style={styles.imageWrapper}
-              className="image-wrapper"
-              onClick={() => setPreviewImage(img.imageUrl)}
-            >
-              <img src={img.imageUrl} alt="Amenity" style={styles.image} />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(img._id);
-                }}
-                className="delete-btn"
+        {/* Gallery Grid */}
+        {images.length === 0 ? (
+          <div className="py-20 text-center bg-white/5 backdrop-blur-md rounded-3xl border border-white/10">
+            <p className="text-gray-500 italic">No memories captured yet. Be the first to share one!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {images.map((img, idx) => (
+              <div
+                key={idx}
+                className="group relative aspect-[4/5] bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5 cursor-zoom-in"
+                onClick={() => setPreviewImage(img.imageUrl)}
               >
-                ❌
-              </button>
-            </div>
-          ))}
-        </div>
+                <img 
+                  src={img.imageUrl} 
+                  alt="Amenity" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                />
+                
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                   <span className="text-white text-xs font-medium tracking-widest uppercase">View Full</span>
+                </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(img._id);
+                  }}
+                  className="absolute top-4 right-4 w-8 h-8 bg-red-500/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0"
+                  title="Delete this memory"
+                >
+                  <span className="text-sm">✕</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Fullscreen Modal */}
+      {/* Fullscreen Modal Preview */}
       {previewImage && (
-        <div style={styles.modal} onClick={() => setPreviewImage(null)}>
-          <img src={previewImage} alt="Preview" style={styles.modalImage} />
-          <button
-            style={styles.modalClose}
-            onClick={() => setPreviewImage(null)}
-          >
-            ✖
-          </button>
+        <div 
+          className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center">
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain border border-white/10" 
+            />
+            <button
+              className="absolute -top-12 right-0 md:-right-12 text-white text-4xl hover:text-[#b8860b] transition-colors"
+              onClick={() => setPreviewImage(null)}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 };
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    paddingTop: "100px",
-    background: "linear-gradient(135deg, #001f3f, #000)",
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: "2rem",
-    borderRadius: "12px",
-    width: "90%",
-    maxWidth: "900px",
-    margin: "auto",
-    textAlign: "center",
-  },
-  heading: {
-    fontSize: "2rem",
-    fontWeight: "bold",
-    marginBottom: "1.5rem",
-    color: "#bfa145",
-  },
-  smallUploadBox: {
-    display: "inline-block",
-    marginBottom: "1.5rem",
-  },
-  smallUploadLabel: {
-    display: "inline-block",
-    padding: "8px 16px",
-    backgroundColor: "#49B9FF",
-    color: "#fff",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500",
-    transition: "background 0.3s",
-  },
-  gallery: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "1rem",
-  },
-  imageWrapper: {
-    position: "relative",
-    cursor: "pointer",
-    borderRadius: "10px",
-    overflow: "hidden",
-  },
-  image: {
-    width: "100%",
-    height: "160px",
-    objectFit: "cover",
-    borderRadius: "10px",
-    transition: "transform 0.3s ease",
-  },
-  modal: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-  },
-  modalImage: {
-    maxHeight: "80vh",
-    maxWidth: "90vw",
-    borderRadius: "10px",
-  },
-  modalClose: {
-    position: "absolute",
-    top: "20px",
-    right: "30px",
-    fontSize: "2rem",
-    background: "transparent",
-    color: "white",
-    border: "none",
-    cursor: "pointer",
-  },
-};
-
-// Global styles for delete button on hover
-const globalCSS = `
-.image-wrapper .delete-btn {
-  display: none;
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #ff4d4f;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 14px;
-  padding: 5px;
-  cursor: pointer;
-}
-.image-wrapper:hover .delete-btn {
-  display: block;
-}
-`;
-
-// Inject global style
-const styleTag = document.createElement("style");
-styleTag.innerHTML = globalCSS;
-document.head.appendChild(styleTag);
 
 export default Amenities;

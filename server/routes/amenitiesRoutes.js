@@ -4,7 +4,8 @@ import { uploadAmenityImages, getAmenityImages , deleteAmenity} from "../control
 import { protect } from "../middleware/authMiddleware.js"; // Clerk-based auth
 const router = express.Router();
 
-const upload = multer({ dest: "uploads/" });
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 router.get("/", getAmenityImages); // Public route
 router.post("/upload", protect, upload.array("images", 10), uploadAmenityImages); // Authenticated upload

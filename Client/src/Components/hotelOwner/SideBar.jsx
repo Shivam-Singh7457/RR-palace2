@@ -9,8 +9,7 @@ const Sidebar = () => {
     { name: "List Room", path: "/owner/list-room", icon: assets.listIcon },
     { name: "Booking Confirmation", path: "/owner/pending", icon: assets.listIcon },
     { name: "Payment Check", path: "/owner/all", icon: assets.listIcon },
-
-    
+    { name: "Guest Reviews", path: "/owner/reviews", icon: assets.listIcon },
   ];
 
   return (

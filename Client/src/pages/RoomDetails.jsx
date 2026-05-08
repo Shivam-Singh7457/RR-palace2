@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { assets, facilityIcons, roomCommonData} from "../assets/assets";
 import StarRating from "../Components/StarRating";
 import { useAppContext } from "../context/AppContext"
@@ -7,17 +7,24 @@ import toast from "react-hot-toast";
 
 const RoomDetails = () => {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const {rooms,getToken, axios , navigate} =useAppContext()
     const [room, setRoom] = useState(null);
     const [mainImage, setMainImage] = useState(null);
-    const [checkInDate, setCheckInDate] = useState(null);
-    const [checkOutDate, setCheckOutDate] = useState(null);
-    const [guests, setGuests] = useState(1);
+    const [checkInDate, setCheckInDate] = useState(searchParams.get("checkIn") || "");
+    const [checkOutDate, setCheckOutDate] = useState(searchParams.get("checkOut") || "");
+    const [guests, setGuests] = useState(searchParams.get("guests") || 1);
     const [isAvailable, setIsAvailable] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [checkingAvailability, setCheckingAvailability] = useState(false);
+    const [reviews, setReviews] = useState([]);
+    const [reviewStats, setReviewStats] = useState({ average: 0, total: 0 });
 
     //checks availablity
     const checkAvailability = async ()=>{
         try {
+            setCheckingAvailability(true);
             if(checkInDate >= checkOutDate){
                 toast.error('Check-In date should be less then Check-Out date')
             }
@@ -35,6 +42,8 @@ const RoomDetails = () => {
             }
         } catch (error) {
             toast.error(error.message)
+        } finally {
+            setCheckingAvailability(false);
         }
     }
 
@@ -44,21 +53,56 @@ const RoomDetails = () => {
             e.preventDefault();
             if(!isAvailable){
                 return checkAvailability();
-            }else{
-                const {data} = await axios.post('/api/bookings/book', {room: id, checkInDate , checkOutDate, guests, paymentMethod: "Pay At Hotel"},{headers: {Authorization: `Bearer ${await getToken()}`}})
-                if(data.success){
-                    toast.success(data.message)
-                    navigate('/my-bookings')
-                    scrollTo(0,0)
-                }else{
-                    toast.error(data.message)
-                }
+            } else {
+                setShowConfirmation(true);
             }
-
         } catch (error) {
             toast.error(error.message)            
         }
     }
+
+    const confirmBooking = async () => {
+        try {
+            setLoading(true);
+            const { data } = await axios.post('/api/bookings/book', {
+                room: id, 
+                checkInDate, 
+                checkOutDate, 
+                guests, 
+                paymentMethod: "Pay At Hotel"
+            }, {
+                headers: { Authorization: `Bearer ${await getToken()}` }
+            });
+
+            if (data.success) {
+                toast.success(data.message);
+                navigate('/my-bookings');
+                scrollTo(0,0);
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
+            setLoading(false);
+            setShowConfirmation(false);
+        }
+    }
+
+    const fetchRoomReviews = async () => {
+        try {
+            const { data } = await axios.get(`/api/reviews/room/${id}`);
+            if (data.success) {
+                setReviews(data.reviews);
+                if (data.reviews.length > 0) {
+                    const avg = data.reviews.reduce((acc, curr) => acc + curr.rating, 0) / data.reviews.length;
+                    setReviewStats({ average: avg.toFixed(1), total: data.reviews.length });
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching reviews:", error);
+        }
+    };
 
     useEffect(() => {
         const foundRoom = rooms.find(room => room._id === id);
@@ -66,7 +110,14 @@ const RoomDetails = () => {
             setRoom(foundRoom);
             setMainImage(foundRoom.images[0]);
         }
-    }, [id]);
+        fetchRoomReviews();
+    }, [id, rooms]);
+
+    useEffect(() => {
+        if (checkInDate && checkOutDate) {
+            checkAvailability();
+        }
+    }, [checkInDate, checkOutDate]);
 
     if (!room) return null;
 
@@ -76,35 +127,34 @@ const RoomDetails = () => {
             <div className="flex flex-col gap-2 mb-6">
                 <div className="flex flex-wrap items-center gap-4">
                     <h1 className="text-3xl md:text-4xl font-playfair">
-                        {room.hotel.name}
-                        <span className="block text-sm font-inter text-gray-600 ml-2">{room.roomType}</span>
+                        {room.roomType}
                     </h1>
                     <p className="text-xs text-white bg-orange-500 px-3 py-1 rounded-full font-semibold">20% OFF</p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <StarRating />
-                    <p className="text-sm text-gray-600 ml-2">200+ reviews</p>
+                    <StarRating rating={Math.round(reviewStats.average) || 5} />
+                    <p className="text-sm text-gray-600 ml-2">{reviewStats.total}+ reviews</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-gray-600">
                     <img src={assets.locationIcon} alt="location" className="h-4 w-4" />
-                    <span className="text-sm">{room.hotel.address}</span>
+                    <span className="text-sm">{room.hotel?.address || "Varanasi, India"}</span>
                 </div>
             </div>
 
             {/* Image Section */}
-            <div className="flex flex-col lg:flex-row gap-6">
-                <div className="w-full lg:w-1/2">
-                    <img src={mainImage} alt="Main Room" className="w-full rounded-xl shadow-lg object-cover" />
+            <div className="flex flex-col xl:flex-row gap-6">
+                <div className="w-full xl:w-2/3">
+                    <img src={mainImage} alt="Main Room" className="w-full aspect-[4/3] md:aspect-video rounded-2xl shadow-xl object-cover" />
                 </div>
-                <div className="grid grid-cols-2 gap-4 w-full lg:w-1/2">
-                    {room.images.length > 1 && room.images.map((image, index) => (
+                <div className="grid grid-cols-4 xl:grid-cols-2 gap-3 w-full xl:w-1/3">
+                    {room.images.length > 0 && room.images.map((image, index) => (
                         <img
                             key={index}
                             src={image}
                             onClick={() => setMainImage(image)}
-                            className={`w-full h-full object-cover rounded-xl cursor-pointer transition-all duration-200 shadow-md ${mainImage === image ? 'outline outline-2 outline-orange-500' : ''}`}
+                            className={`w-full h-20 sm:h-24 md:h-32 xl:h-full object-cover rounded-xl cursor-pointer transition-all duration-300 shadow-md ${mainImage === image ? 'ring-2 ring-orange-500 ring-offset-2' : 'hover:opacity-80'}`}
                         />
                     ))}
                 </div>
@@ -124,27 +174,36 @@ const RoomDetails = () => {
             </div>
 
             {/* Availability Form */}
-            <form onSubmit={onSubmitHandler} className="mt-14 bg-white p-6 rounded-xl shadow-xl max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                <div className="flex flex-col md:flex-row gap-6 w-full md:w-auto">
-                    <div>
-                        <label htmlFor="checkInDate" className="font-medium text-sm">Check-In</label>
+            <form onSubmit={onSubmitHandler} className="mt-14 bg-white p-5 md:p-8 rounded-2xl shadow-2xl max-w-6xl mx-auto flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6 border border-gray-100">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-8 flex-grow">
+                    <div className="flex-1">
+                        <label htmlFor="checkInDate" className="font-semibold text-xs uppercase tracking-wider text-gray-500 mb-1 block">Check-In</label>
                         <input onChange={(e)=>setCheckInDate(e.target.value)}
+                        value={checkInDate}
                         min={new Date().toISOString().split('T')[0]} 
-                        type="date" id="checkInDate" className="w-full border border-gray-300 px-3 py-2 mt-1 rounded-md outline-none" required />
+                        type="date" id="checkInDate" className="w-full border border-gray-200 px-4 py-3 rounded-xl outline-none focus:border-orange-500 transition-colors bg-gray-50/50" required />
                     </div>
-                    <div>
-                        <label htmlFor="checkOutDate" className="font-medium text-sm">Check-Out</label>
+                    <div className="flex-1">
+                        <label htmlFor="checkOutDate" className="font-semibold text-xs uppercase tracking-wider text-gray-500 mb-1 block">Check-Out</label>
                         <input onChange={(e)=>setCheckOutDate(e.target.value)}
+                        value={checkOutDate}
                         min={checkInDate} disabled = {!checkInDate} 
-                        type="date" id="checkOutDate" className="w-full border border-gray-300 px-3 py-2 mt-1 rounded-md outline-none" required />
+                        type="date" id="checkOutDate" className="w-full border border-gray-200 px-4 py-3 rounded-xl outline-none focus:border-orange-500 transition-colors bg-gray-50/50" required />
                     </div>
-                    <div className='flex flex-col'>
-                        <label htmlFor="guests" className="font-medium text-sm">Guests</label>
-                        <input onChange={(e)=>setGuests(e.target.value)} value={guests} type="number" id="guests" placeholder="1" className="w-20 border border-gray-300 px-3 py-2 mt-1 rounded-md outline-none" required />
+                    <div className='w-full md:w-32'>
+                        <label htmlFor="guests" className="font-semibold text-xs uppercase tracking-wider text-gray-500 mb-1 block">Guests</label>
+                        <input onChange={(e)=>setGuests(e.target.value)} value={guests} type="number" id="guests" placeholder="1" className="w-full border border-gray-200 px-4 py-3 rounded-xl outline-none focus:border-orange-500 transition-colors bg-gray-50/50" required />
                     </div>
                 </div>
-                <button type="submit" className="bg-primary text-white px-8 py-3 rounded-md hover:bg-primary-dull transition">
-                    {isAvailable ? "Book Now" : "Check Availability"}
+                <button 
+                    type="submit" 
+                    disabled={checkingAvailability}
+                    className="bg-black text-white px-10 py-4 rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg active:scale-[0.98] disabled:bg-gray-400 mt-2 xl:mt-0 h-[58px]"
+                >
+                    <div className="flex items-center justify-center gap-2">
+                        {checkingAvailability && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                        <span>{checkingAvailability ? "Checking..." : isAvailable ? "Book This Room" : "Check Availability"}</span>
+                    </div>
                 </button>
             </form>
 
@@ -164,6 +223,98 @@ const RoomDetails = () => {
             {/* Notice Section */}
             <div className="max-w-3xl border-y border-gray-300 my-12 py-6 text-sm text-gray-600">
                 Guests are allocated rooms as per availability.
+            </div>
+
+            {/* Confirmation Modal */}
+            {showConfirmation && (
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6 transform transition-all scale-100">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-playfair font-bold text-gray-900">Confirm Your Stay</h2>
+                            <p className="text-sm text-gray-500 mt-1">Please review your booking details</p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                                <span className="text-gray-500 text-sm">Room</span>
+                                <span className="font-semibold text-gray-800">{room.roomType}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                                <span className="text-gray-500 text-sm">Check-In</span>
+                                <span className="font-semibold text-gray-800">{new Date(checkInDate).toDateString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                                <span className="text-gray-500 text-sm">Check-Out</span>
+                                <span className="font-semibold text-gray-800">{new Date(checkOutDate).toDateString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                                <span className="text-gray-500 text-sm">Guests</span>
+                                <span className="font-semibold text-gray-800">{guests}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-1">
+                                <span className="text-gray-900 font-bold">Total Amount</span>
+                                <span className="text-xl font-bold text-orange-600">₹ {room.pricePerNight * Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 3600 * 24))}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <button 
+                                onClick={confirmBooking}
+                                disabled={loading}
+                                className="btn-premium w-full py-4 text-base"
+                            >
+                                {loading && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>}
+                                {loading ? "Booking..." : "Confirm & Book Now"}
+                            </button>
+                            <button 
+                                onClick={() => !loading && setShowConfirmation(false)}
+                                disabled={loading}
+                                className={`w-full text-gray-500 py-2 text-sm transition-colors ${loading ? "opacity-50 cursor-not-allowed" : "hover:text-gray-800"}`}
+                            >
+                                Go back and edit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reviews Section */}
+            <div className="mt-24 space-y-12">
+                <div className="border-b border-gray-200 pb-8 flex justify-between items-end">
+                    <div>
+                        <h2 className="text-3xl font-playfair font-bold text-gray-900">Guest Experiences</h2>
+                        <p className="text-gray-500 mt-2">What our visitors have to say about their stay</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-4xl font-bold text-gray-900">{reviewStats.average || "5.0"}</p>
+                        <div className="flex text-orange-500 text-sm">★★★★★</div>
+                        <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">{reviewStats.total} Reviews</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {reviews.length === 0 ? (
+                        <p className="text-gray-400 italic">No reviews yet for this room. Be the first to share your experience!</p>
+                    ) : (
+                        reviews.map((review) => (
+                            <div key={review._id} className="bg-gray-50/50 p-8 rounded-3xl space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <img src={review.userImage || assets.profile_icon} className="w-10 h-10 rounded-full border-2 border-white shadow-sm" alt="" />
+                                        <div>
+                                            <p className="font-bold text-gray-900 text-sm">{review.userName}</p>
+                                            <p className="text-[10px] text-gray-400 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex text-orange-500 text-xs">
+                                        {[1, 2, 3, 4, 5].map(s => <span key={s}>{s <= review.rating ? "★" : "☆"}</span>)}
+                                    </div>
+                                </div>
+                                <p className="text-gray-600 text-sm leading-relaxed italic">"{review.experience}"</p>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import express from "express";
 import { createRoom, getOwnerRoom, getRoom, toggleRoomAvailability, getTopViewedRooms } from "../controllers/roomController.js";
+import { lockRoom, unlockRoom } from "../controllers/lockController.js";
 import upload from "../middleware/uploadMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -10,6 +11,8 @@ roomRouter.get('/',getRoom)
 roomRouter.get('/owner',protect,getOwnerRoom)
 roomRouter.post('/toggle-availability',protect,toggleRoomAvailability)
 roomRouter.get("/top-viewed", getTopViewedRooms);
+roomRouter.post("/lock", protect, lockRoom);
+roomRouter.post("/unlock", protect, unlockRoom);
 
 
 export default roomRouter;

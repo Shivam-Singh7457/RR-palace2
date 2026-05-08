@@ -4,19 +4,37 @@ import Amenity from "../models/Amenities.js";
 // Upload Amenity Images - Public for logged-in users
 export const uploadAmenityImages = async (req, res) => {
   try {
-    const uploaded = req.files.map(async (file) => {
-      const response = await cloudinary.uploader.upload(file.path);
+    if (!req.files || req.files.length === 0) {
+      return res.json({ success: false, message: "No images provided" });
+    }
 
-      return await Amenity.create({
-        imageUrl: response.secure_url,
-        uploadedBy: req.user?._id || "anonymous", // Optional
+    const uploadPromises = req.files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "amenities" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(file.buffer);
       });
     });
 
-    const uploadedImages = await Promise.all(uploaded);
+    const results = await Promise.all(uploadPromises);
 
-    res.json({ success: true, data: uploadedImages });
+    const savedImages = await Promise.all(
+      results.map((result) =>
+        Amenity.create({
+          imageUrl: result.secure_url,
+          uploadedBy: req.user?._id || "anonymous",
+        })
+      )
+    );
+
+    res.json({ success: true, data: savedImages });
   } catch (error) {
+    console.error("🔴 Cloudinary Upload Error:", error);
     res.json({ success: false, message: error.message });
   }
 };
