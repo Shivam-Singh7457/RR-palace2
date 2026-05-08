@@ -9,12 +9,6 @@ import LoadingScreen from "../Components/LoadingScreen";
 import { useAppContext } from "../context/AppContext";
 
 const Home=()=>{
-    const { loadingRooms } = useAppContext();
-
-    if (loadingRooms) {
-        return <LoadingScreen />;
-    }
-
     return (
         <>
             <Hero />
