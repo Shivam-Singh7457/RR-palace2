@@ -5,8 +5,16 @@ import ExclusiveOffers from "../Components/ExclusiveOffers";
 import Testimonial from "../Components/Testimonial";
 import NewsLetter from "../Components/NewsLetter";
 import TopRooms from "../Components/TopRooms";
+import LoadingScreen from "../Components/LoadingScreen";
+import { useAppContext } from "../context/AppContext";
 
 const Home=()=>{
+    const { loadingRooms } = useAppContext();
+
+    if (loadingRooms) {
+        return <LoadingScreen />;
+    }
+
     return (
         <>
             <Hero />

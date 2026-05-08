@@ -14,8 +14,7 @@ import reviewRouter from "./routes/reviewRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import { initCleanupTask } from "./utils/cleanupTask.js";
 
-// ✅ Initialize DB and Cloudinary
-connectDB();
+// ✅ Initialize Cloudinary and Cleanup
 connectCloudinary();
 initCleanupTask();
 
@@ -57,13 +56,18 @@ app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/reviews", reviewRouter);
 
-// ✅ Listen on Render-supplied port or default to 5000
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+// ✅ Start Server after DB Connection
+const startServer = async () => {
+    try {
+        await connectDB();
+        const port = process.env.PORT || 5000;
+        app.listen(port, () => {
+            console.log(`Server running on port ${port}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
+    }
+};
 
-// A simple health check route
-app.get("/ping", (req, res) => {
-  res.status(200).send("Server is awake");
-});
+startServer();
