@@ -20,8 +20,26 @@ connectCloudinary();
 initCleanupTask();
 
 const app = express();
+// ✅ CORS Configuration
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
+  "https://rr-palace2.vercel.app" // Direct production URL without slash
+].map(url => url?.endsWith('/') ? url.slice(0, -1) : url).filter(Boolean);
+
+// Also add the versions WITH slashes to be safe
+const originsWithSlashes = allowedOrigins.map(url => `${url}/`);
+const finalAllowedOrigins = [...new Set([...allowedOrigins, ...originsWithSlashes])];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+        if (!origin || finalAllowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log("Blocked by CORS:", origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json());

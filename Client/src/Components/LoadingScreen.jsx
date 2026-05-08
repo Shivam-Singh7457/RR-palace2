@@ -1,87 +1,103 @@
 import React from 'react';
+import ghats from '../assets/loading/ghats.png';
+import aarti from '../assets/loading/aarti.png';
+import streets from '../assets/loading/streets.png';
 
 const LoadingScreen = () => {
+    const scenes = [
+        { img: ghats, title: "The Sacred Ghats", sub: "Spirituality at its source" },
+        { img: aarti, title: "Evening Ganga Aarti", sub: "A symphony of light and fire" },
+        { img: streets, title: "Ancient Narrow Alleys", sub: "History in every corner" }
+    ];
+
     return (
-        <div className="flex flex-col items-center justify-center py-20 px-4 min-h-[70vh] w-full bg-gradient-to-b from-orange-50/30 to-white rounded-3xl overflow-hidden relative">
-            {/* Decorative background element */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none opacity-[0.03] overflow-hidden">
-                <div className="absolute -top-24 -left-24 w-96 h-96 bg-orange-500 rounded-full blur-[120px]"></div>
-                <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-red-500 rounded-full blur-[120px]"></div>
+        <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4 min-h-[85vh] w-full bg-white overflow-hidden relative">
+            {/* Soft Ambient Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.05]">
+                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-400 rounded-full blur-[150px] animate-pulse"></div>
+                <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-red-400 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '2s' }}></div>
             </div>
 
-            {/* Animated Header */}
-            <div className="text-center mb-16 relative z-10">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-100 text-orange-600 text-xs font-bold uppercase tracking-widest mb-6 animate-bounce">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                    </span>
-                    Live from Varanasi
-                </div>
-                
-                <div className="relative inline-block mb-4">
-                    <h2 className="text-4xl md:text-5xl font-playfair font-bold text-gray-900 leading-tight">
-                        Finding the best room <br/> for your journey
-                    </h2>
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-24 h-1.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-full"></div>
-                </div>
-                
-                <p className="text-gray-500 mt-10 text-lg font-light tracking-wide max-w-lg mx-auto">
-                    Taking a moment to curate the perfect stay amidst the spiritual soul of India...
-                </p>
-            </div>
-
-            {/* Varanasi Image Grid Placeholder */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl relative z-10">
-                {[1, 2, 3].map((i) => (
-                    <div 
-                        key={i} 
-                        className="group relative h-72 md:h-96 rounded-3xl overflow-hidden bg-white shadow-2xl transition-all duration-700 hover:-translate-y-2"
-                    >
-                        {/* Skeleton Content */}
-                        <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 animate-pulse"></div>
-                            
-                            {/* Animated Inner Box (User adds image here) */}
-                            <div className="relative h-full w-full border-2 border-dashed border-orange-200 rounded-2xl flex items-center justify-center group-hover:border-orange-400 transition-colors duration-500 bg-white/40 backdrop-blur-[2px]">
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
-                                        <div className="w-6 h-6 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
-                                    </div>
-                                    <p className="text-[10px] font-mono text-orange-300 uppercase tracking-[0.3em]">
-                                        Varanasi Scene {i}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Bottom Skeleton Lines */}
-                            <div className="mt-6 space-y-3 relative z-10">
-                                <div className="h-4 w-2/3 bg-gray-200/50 rounded-full animate-pulse"></div>
-                                <div className="h-3 w-1/2 bg-gray-100/50 rounded-full animate-pulse"></div>
-                            </div>
-                        </div>
-
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-0 bg-orange-600/0 group-hover:bg-orange-600/5 transition-all duration-500"></div>
+            {/* Main Content */}
+            <div className="max-w-6xl w-full relative z-10">
+                {/* Header Section */}
+                <div className="text-center mb-16">
+                    <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold uppercase tracking-[0.3em] mb-8 border border-orange-100/50">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                        </span>
+                        Live from Varanasi
                     </div>
-                ))}
-            </div>
+                    
+                    <h2 className="text-4xl md:text-6xl font-playfair font-bold text-gray-900 leading-tight mb-6">
+                        Finding the best rooms <br className="hidden md:block" /> for you
+                    </h2>
+                    
+                    <p className="text-gray-500 text-lg md:text-xl font-light tracking-wide max-w-2xl mx-auto italic">
+                        "While we curate your perfect stay, take a moment to experience the timeless soul of Varanasi..."
+                    </p>
+                </div>
 
-            {/* Bottom Progress */}
-            <div className="mt-20 flex flex-col items-center gap-4 relative z-10">
-                <div className="flex gap-2">
-                    {[0, 1, 2].map((dot) => (
+                {/* Immersive Gallery Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-16">
+                    {scenes.map((scene, i) => (
                         <div 
-                            key={dot}
-                            className="w-2 h-2 rounded-full bg-orange-400 animate-bounce"
-                            style={{ animationDelay: `${dot * 0.2}s` }}
-                        ></div>
+                            key={i} 
+                            className="group relative h-[300px] md:h-[450px] rounded-[40px] overflow-hidden bg-gray-100 shadow-2xl shadow-gray-200 transition-all duration-1000 hover:-translate-y-3"
+                        >
+                            {/* Image with Parallax-like Zoom */}
+                            <img 
+                                src={scene.img} 
+                                alt={scene.title}
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-[3000ms] ease-out group-hover:scale-125"
+                            />
+                            
+                            {/* Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                            
+                            {/* Text Content */}
+                            <div className="absolute bottom-0 left-0 w-full p-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-700">
+                                <p className="text-[10px] font-bold text-orange-400 uppercase tracking-[0.3em] mb-2">{scene.sub}</p>
+                                <h3 className="text-2xl font-playfair font-bold text-white leading-none">{scene.title}</h3>
+                            </div>
+
+                            {/* Animated Border on Hover */}
+                            <div className="absolute inset-4 border border-white/20 rounded-[30px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        </div>
                     ))}
                 </div>
-                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.4em] ml-2">
-                    Connecting to RR Palace Network
-                </span>
+
+                {/* Progress Indicators */}
+                <div className="flex flex-col items-center gap-6">
+                    <div className="flex gap-4">
+                        {[0, 1, 2].map((dot) => (
+                            <div 
+                                key={dot}
+                                className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-bounce"
+                                style={{ animationDelay: `${dot * 0.2}s` }}
+                            ></div>
+                        ))}
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.5em]">
+                            Connecting to RR Palace Cloud
+                        </p>
+                        <div className="w-48 h-[1px] bg-gray-100 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full w-1/2 bg-orange-400 animate-[loading-bar_2s_infinite_linear]"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            {/* Global Animation Keyframes (Inline Style for convenience) */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes loading-bar {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(200%); }
+                }
+            `}} />
         </div>
     );
 };
