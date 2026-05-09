@@ -4,7 +4,7 @@ import { createContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "");
 axios.defaults.withCredentials = true; // Enable sending cookies
 
 console.log("🌐 Axios Base URL:", axios.defaults.baseURL);

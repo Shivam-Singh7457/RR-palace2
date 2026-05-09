@@ -48,6 +48,12 @@ app.use(passport.initialize());
 // ✅ Basic check route
 app.get("/", (req, res) => res.send("API is working"));
 
+// ✅ Request Logger Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // ✅ API Routes
 app.use("/api/auth", authRouter);
 app.use("/api/amenities", amenitiesRoutes);
@@ -55,6 +61,12 @@ app.use("/api/user", userRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/reviews", reviewRouter);
+
+// ✅ 404 Handler for undefined routes
+app.use((req, res) => {
+    console.warn(`[404] Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({ success: false, message: `Route ${req.method} ${req.url} not found on this server` });
+});
 
 // ✅ Start Server after DB Connection
 const startServer = async () => {
