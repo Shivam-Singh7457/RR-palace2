@@ -68,20 +68,14 @@ export const createBooking = async (req, res) => {
       `,
     };
 
-    // Try sending email
-    try {
-      console.log("📧 Sending confirmation email to:", req.user.email);
-      await transporter.sendMail(mailOptions);
+    // Send email in the background (non-blocking) to avoid timeouts
+    transporter.sendMail(mailOptions).then(() => {
       console.log("✅ Email sent successfully");
-    } catch (mailError) {
-      console.error("🔴 Email failed:", mailError.message);
-      // Manual Rollback: Delete the booking if email fails
-      if (createdBookingId) {
-        console.log("🔄 Rolling back booking due to email failure...");
-        await Booking.findByIdAndDelete(createdBookingId);
-      }
-      throw new Error(`Booking failed because confirmation email could not be sent: ${mailError.message}`);
-    }
+    }).catch((mailError) => {
+      console.error("🔴 Email failed in background:", mailError.message);
+      // We don't roll back here because the booking was already successful
+      // and we've already responded to the user.
+    });
 
     res.json({ success: true, message: "Booking created successfully", booking });
   } catch (error) {

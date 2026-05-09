@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { assets, facilityIcons, roomCommonData} from "../assets/assets";
 import StarRating from "../Components/StarRating";
 import { useAppContext } from "../context/AppContext"
@@ -8,7 +8,8 @@ import toast from "react-hot-toast";
 const RoomDetails = () => {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
-    const {rooms,getToken, axios , navigate} =useAppContext()
+    const {rooms,getToken, axios } =useAppContext()
+    const navigate = useNavigate();
     const [room, setRoom] = useState(null);
     const [mainImage, setMainImage] = useState(null);
     const [checkInDate, setCheckInDate] = useState(searchParams.get("checkIn") || "");
@@ -88,10 +89,12 @@ const RoomDetails = () => {
             console.log("📡 Booking response:", data);
 
             if (data.success) {
+                console.log("✅ Booking successful, navigating to /my-bookings");
                 toast.success(data.message);
                 navigate('/my-bookings');
-                scrollTo(0,0);
+                window.scrollTo(0, 0);
             } else {
+                console.warn("⚠️ Booking failed on server:", data.message);
                 toast.error(data.message);
             }
         } catch (error) {
