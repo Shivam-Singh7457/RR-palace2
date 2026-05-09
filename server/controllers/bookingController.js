@@ -240,7 +240,12 @@ export const markAsPaid = async (req, res) => {
       ,
     };
 
-    await transporter.sendMail(mailOptions);
+    // Send confirmation email in background
+    transporter.sendMail(mailOptions).then(() => {
+      console.log("✅ Payment confirmation email sent");
+    }).catch((err) => {
+      console.error("🔴 Payment confirmation email failed:", err.message);
+    });
 
     res.json({ success: true, message: "Marked as paid and email sent" });
   } catch (err) {
@@ -311,7 +316,12 @@ export const deleteBooking = async (req, res) => {
     };
 
 
-    await transporter.sendMail(mailOptions);
+    // Send rejection email in background
+    transporter.sendMail(mailOptions).then(() => {
+      console.log("✅ Rejection email sent");
+    }).catch((err) => {
+      console.error("🔴 Rejection email failed:", err.message);
+    });
 
     await Booking.findByIdAndDelete(req.params.bookingId);
 
