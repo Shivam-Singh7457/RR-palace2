@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import Room from "../models/Rooms.js";
-import transporter from "../configs/nodemailer.js";
+import { sendEmail } from "../utils/emailUtils.js";
 import User from "../models/User.js";
 import { isOwnerOrCoOwner } from "../utils/ownership.js";
 import { createBookingService, checkRoomAvailability } from "../services/bookingService.js";
@@ -47,9 +47,9 @@ export const createBooking = async (req, res) => {
     console.log("✅ Booking service success. ID:", booking._id);
     createdBookingId = booking._id;
 
-    const mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: req.user.email,
+    // Send email in the background (non-blocking) to avoid timeouts
+    sendEmail({
+      email: req.user.email,
       subject: "Hotel Booking Details",
       html: `
         <h2>Your Booking Details</h2>
@@ -66,15 +66,10 @@ export const createBooking = async (req, res) => {
         <p>We look forward to welcoming you!</p>
         <p>If you have any questions, feel free to reach out.</p>
       `,
-    };
-
-    // Send email in the background (non-blocking) to avoid timeouts
-    transporter.sendMail(mailOptions).then(() => {
+    }).then(() => {
       console.log("✅ Email sent successfully");
     }).catch((mailError) => {
       console.error("🔴 Email failed in background:", mailError.message);
-      // We don't roll back here because the booking was already successful
-      // and we've already responded to the user.
     });
 
     res.json({ success: true, message: "Booking created successfully", booking });
@@ -220,9 +215,9 @@ export const markAsPaid = async (req, res) => {
     booking.paymentMethod = "UPI";
     await booking.save();
 
-    const mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: booking.user.email,
+    // Send confirmation email in background
+    sendEmail({
+      email: booking.user.email,
       subject: "Payment Confirmed – RR Palace",
       html:`
         <h2>Payment Confirmation</h2>
@@ -238,10 +233,7 @@ export const markAsPaid = async (req, res) => {
         </ul>
         <p>Thank you for choosing us. We look forward to your stay!</p>`
       ,
-    };
-
-    // Send confirmation email in background
-    transporter.sendMail(mailOptions).then(() => {
+    }).then(() => {
       console.log("✅ Payment confirmation email sent");
     }).catch((err) => {
       console.error("🔴 Payment confirmation email failed:", err.message);
@@ -296,9 +288,9 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-     const mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: booking.user.email,
+     // Send rejection email in background
+    sendEmail({
+      email: booking.user.email,
       subject: "Booking Rejected – RR Palace",
       html: `
           <h2>Your Booking Has Been Rejected</h2>
@@ -313,11 +305,7 @@ export const deleteBooking = async (req, res) => {
           </ul>
           <p>If you have any questions, feel free to contact us.</p>`
       ,
-    };
-
-
-    // Send rejection email in background
-    transporter.sendMail(mailOptions).then(() => {
+    }).then(() => {
       console.log("✅ Rejection email sent");
     }).catch((err) => {
       console.error("🔴 Rejection email failed:", err.message);
