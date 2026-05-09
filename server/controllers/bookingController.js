@@ -8,11 +8,14 @@ import { createBookingService, checkRoomAvailability } from "../services/booking
 
 
 export const checkAvailabilityAPI = async (req, res) => {
+  console.log("📨 Received availability check request:", req.body);
   try {
     const { room, checkInDate, checkOutDate } = req.body;
     const isAvailable = await checkRoomAvailability({ checkInDate, checkOutDate, room });
+    console.log("✔️ Availability result:", isAvailable);
     res.json({ success: true, isAvailable });
   } catch (error) {
+    console.error("🔴 checkAvailabilityAPI Error:", error.message);
     res.json({ success: false, message: error.message });
   }
 };
@@ -20,14 +23,18 @@ export const checkAvailabilityAPI = async (req, res) => {
 
 export const createBooking = async (req, res) => {
   let createdBookingId = null;
+  console.log("📨 Received create booking request:", req.body);
   
   try {
     if (!req.user || !req.user._id) {
+      console.warn("⚠️ createBooking: User not authenticated");
       return res.status(401).json({ success: false, message: "User not authenticated..Please Login First" });
     }
 
     const { room, checkInDate, checkOutDate, guests } = req.body;
     const user = req.user._id;
+
+    console.log("👤 Booking user:", req.user.email);
 
     const { booking, roomData } = await createBookingService({
       user,
@@ -37,6 +44,7 @@ export const createBooking = async (req, res) => {
       guests,
     });
 
+    console.log("✅ Booking service success. ID:", booking._id);
     createdBookingId = booking._id;
 
     const mailOptions = {
@@ -62,10 +70,14 @@ export const createBooking = async (req, res) => {
 
     // Try sending email
     try {
+      console.log("📧 Sending confirmation email to:", req.user.email);
       await transporter.sendMail(mailOptions);
+      console.log("✅ Email sent successfully");
     } catch (mailError) {
+      console.error("🔴 Email failed:", mailError.message);
       // Manual Rollback: Delete the booking if email fails
       if (createdBookingId) {
+        console.log("🔄 Rolling back booking due to email failure...");
         await Booking.findByIdAndDelete(createdBookingId);
       }
       throw new Error(`Booking failed because confirmation email could not be sent: ${mailError.message}`);
@@ -73,7 +85,7 @@ export const createBooking = async (req, res) => {
 
     res.json({ success: true, message: "Booking created successfully", booking });
   } catch (error) {
-    console.error("Create booking error:", error);
+    console.error("🔴 Create booking error:", error.message);
     res.json({ success: false, message: error.message || "Booking creation failed" });
   }
 };

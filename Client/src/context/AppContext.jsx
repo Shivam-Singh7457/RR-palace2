@@ -7,6 +7,11 @@ import { toast } from "react-hot-toast";
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 axios.defaults.withCredentials = true; // Enable sending cookies
 
+console.log("🌐 Axios Base URL:", axios.defaults.baseURL);
+if (!axios.defaults.baseURL) {
+  console.warn("⚠️ VITE_BACKEND_URL is undefined. Requests will be made to the frontend origin.");
+}
+
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
@@ -25,9 +30,11 @@ export const AppProvider = ({ children }) => {
   // Configure axios authorization header whenever token changes
   useEffect(() => {
     if (token) {
+      console.log("🔑 Token found, setting Authorization header");
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       localStorage.setItem("token", token);
     } else {
+      console.log("🚫 No token, removing Authorization header");
       delete axios.defaults.headers.common["Authorization"];
       localStorage.removeItem("token");
     }

@@ -23,12 +23,16 @@ const RoomDetails = () => {
 
     //checks availablity
     const checkAvailability = async ()=>{
+        console.log("🔍 Checking availability for room:", id, { checkInDate, checkOutDate });
         try {
             setCheckingAvailability(true);
             if(checkInDate >= checkOutDate){
+                console.warn("❌ Invalid dates: check-in >= check-out");
                 toast.error('Check-In date should be less then Check-Out date')
+                return; // Fixed: added return to prevent API call
             }
             const {data} = await axios.post('/api/bookings/check-availability', {room:id, checkInDate ,checkOutDate})
+            console.log("📡 Availability response:", data);
             if(data.success){
                 if(data.isAvailable){
                     setIsAvailable(true)
@@ -41,6 +45,7 @@ const RoomDetails = () => {
                 toast.error(data.message)
             }
         } catch (error) {
+            console.error("🔴 checkAvailability Error:", error);
             toast.error(error.message)
         } finally {
             setCheckingAvailability(false);
@@ -62,17 +67,25 @@ const RoomDetails = () => {
     }
 
     const confirmBooking = async () => {
+        const bookingData = {
+            room: id, 
+            checkInDate, 
+            checkOutDate, 
+            guests, 
+            paymentMethod: "Pay At Hotel"
+        };
+        console.log("🚀 Confirming booking with data:", bookingData);
+        
         try {
             setLoading(true);
-            const { data } = await axios.post('/api/bookings/book', {
-                room: id, 
-                checkInDate, 
-                checkOutDate, 
-                guests, 
-                paymentMethod: "Pay At Hotel"
-            }, {
-                headers: { Authorization: `Bearer ${await getToken()}` }
+            const token = await getToken();
+            console.log("🎟️ Token for booking:", token ? "Found (Truncated: " + token.substring(0, 10) + "...)" : "Not Found");
+
+            const { data } = await axios.post('/api/bookings/book', bookingData, {
+                headers: { Authorization: `Bearer ${token}` }
             });
+
+            console.log("📡 Booking response:", data);
 
             if (data.success) {
                 toast.success(data.message);
@@ -82,6 +95,8 @@ const RoomDetails = () => {
                 toast.error(data.message);
             }
         } catch (error) {
+            console.error("🔴 confirmBooking Error:", error);
+            console.error("🔴 Error Response:", error.response?.data);
             toast.error(error.message);
         } finally {
             setLoading(false);
