@@ -6,6 +6,7 @@ const AdminReviews = () => {
     const { axios, getToken } = useAppContext();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingId, setLoadingId] = useState(null);
 
     const fetchReviews = async () => {
         try {
@@ -25,6 +26,7 @@ const AdminReviews = () => {
 
     const handleStatusUpdate = async (id, status) => {
         try {
+            setLoadingId(id);
             const token = await getToken();
             const { data } = await axios.put(`/api/reviews/${id}/status`, { status }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -37,6 +39,8 @@ const AdminReviews = () => {
             }
         } catch (error) {
             toast.error("Operation failed");
+        } finally {
+            setLoadingId(null);
         }
     };
 
@@ -114,18 +118,22 @@ const AdminReviews = () => {
                                     <div className="flex gap-3 pt-4 border-t border-gray-100">
                                         {review.status !== "approved" && (
                                             <button 
-                                                onClick={() => handleStatusUpdate(review._id, "approved")}
-                                                className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition shadow-lg shadow-green-100"
+                                                onClick={() => !loadingId && handleStatusUpdate(review._id, "approved")}
+                                                disabled={!!loadingId}
+                                                className={`px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center gap-2 ${loadingId === review._id ? "opacity-70 cursor-not-allowed" : ""}`}
                                             >
-                                                Approve
+                                                {loadingId === review._id && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                                                {loadingId === review._id ? "..." : "Approve"}
                                             </button>
                                         )}
                                         {review.status !== "rejected" && (
                                             <button 
-                                                onClick={() => handleStatusUpdate(review._id, "rejected")}
-                                                className="px-6 py-2 bg-white text-red-600 border border-red-200 rounded-xl text-sm font-bold hover:bg-red-50 transition"
+                                                onClick={() => !loadingId && handleStatusUpdate(review._id, "rejected")}
+                                                disabled={!!loadingId}
+                                                className={`px-6 py-2 bg-white text-red-600 border border-red-200 rounded-xl text-sm font-bold hover:bg-red-50 transition flex items-center gap-2 ${loadingId === review._id ? "opacity-70 cursor-not-allowed" : ""}`}
                                             >
-                                                Reject
+                                                {loadingId === review._id && <div className="w-3 h-3 border-2 border-red-100/30 border-t-red-600 rounded-full animate-spin"></div>}
+                                                {loadingId === review._id ? "..." : "Reject"}
                                             </button>
                                         )}
                                     </div>

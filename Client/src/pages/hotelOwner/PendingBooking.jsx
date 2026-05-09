@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 const PendingBookings = () => {
   const { axios, getToken } = useAppContext();
   const [bookings, setBookings] = useState([]);
+  const [loadingId, setLoadingId] = useState(null);
 
   const fetchPendingBookings = async () => {
     try {
@@ -21,6 +22,7 @@ const PendingBookings = () => {
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
+      setLoadingId(bookingId);
       const token = await getToken();
       if (newStatus === "cancelled") {
         // Delete the booking from DB
@@ -51,6 +53,8 @@ const PendingBookings = () => {
       fetchPendingBookings();
     } catch (err) {
       toast.error("Failed to update booking status");
+    } finally {
+      setLoadingId(null);
     }
   };
 
@@ -94,16 +98,20 @@ const PendingBookings = () => {
                   <td className="px-4 py-3 text-gray-700">{new Date(item.checkOutDate).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-gray-700 flex gap-2">
                     <button
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md"
-                      onClick={() => handleStatusUpdate(item._id, "confirmed")}
+                      className={`bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md transition-all flex items-center gap-1 ${loadingId === item._id ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !loadingId && handleStatusUpdate(item._id, "confirmed")}
+                      disabled={!!loadingId}
                     >
-                      Confirm
+                      {loadingId === item._id ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : null}
+                      {loadingId === item._id ? "..." : "Confirm"}
                     </button>
                     <button
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
-                      onClick={() => handleStatusUpdate(item._id, "cancelled")}
+                      className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition-all flex items-center gap-1 ${loadingId === item._id ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !loadingId && handleStatusUpdate(item._id, "cancelled")}
+                      disabled={!!loadingId}
                     >
-                      Reject
+                      {loadingId === item._id ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : null}
+                      {loadingId === item._id ? "..." : "Reject"}
                     </button>
                   </td>
                 </tr>

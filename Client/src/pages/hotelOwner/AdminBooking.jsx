@@ -11,6 +11,7 @@ const AdminBookings = () => {
   const [isPaid, setIsPaid] = useState("");
   const [search, setSearch] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
+  const [loadingId, setLoadingId] = useState(null);
 
   const formatDate = (date) => new Date(date).toISOString().split("T")[0];
 
@@ -36,6 +37,7 @@ const AdminBookings = () => {
 
   const handleTogglePaid = async (bookingId, paidStatus) => {
     try {
+      setLoadingId(bookingId);
       const token = await getToken();
       const endpoint = paidStatus ? "mark-unpaid" : "mark-paid";
       const res = await axios.patch(`/api/bookings/${bookingId}/${endpoint}`, {}, {
@@ -51,6 +53,8 @@ const AdminBookings = () => {
     } catch (err) {
       console.log(err.message)
       toast.error("Failed to update payment status");
+    } finally {
+      setLoadingId(null);
     }
   };
 
@@ -137,10 +141,11 @@ const AdminBookings = () => {
                   <td className="px-4 py-3 text-gray-700">{item.status}</td>
                   <td className="px-4 py-3 text-gray-700">
                     <button
-                      className={`text-xs px-2 py-1 rounded-full mx-auto ${item.isPaid ? "bg-green-200 text-green-700" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"}`}
-                      onClick={() => handleTogglePaid(item._id, item.isPaid)}
+                      className={`text-xs px-2 py-1 rounded-full mx-auto transition-all ${loadingId === item._id ? "opacity-50 cursor-not-allowed bg-gray-200" : item.isPaid ? "bg-green-200 text-green-700" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"}`}
+                      onClick={() => !loadingId && handleTogglePaid(item._id, item.isPaid)}
+                      disabled={!!loadingId}
                     >
-                      {item.isPaid ? "Mark as Unpaid" : "Mark as Paid"}
+                      {loadingId === item._id ? "Processing..." : item.isPaid ? "Mark as Unpaid" : "Mark as Paid"}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-gray-700">
