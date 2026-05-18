@@ -20,7 +20,7 @@
 
 - **👑 Royal Accommodations**: A curated selection of premium rooms with high-definition imagery and detailed luxury specs.
 - **🔐 Secure Authentication**: Integrated with **Clerk** to provide a seamless, enterprise-grade login and signup experience.
-- **💳 Seamless Payments**: Professional payment processing via **Stripe** for secure room bookings worldwide.
+- **💳 Seamless Payments**: Efficient and easy payment processing via **QR code** for secure room bookings worldwide.
 - **🖼️ Interactive Gallery**: A dynamic amenities showcase powered by **Cloudinary** for lightning-fast image delivery.
 - **📧 Smart Notifications**: Automated personalized booking confirmations and inquiry responses via **Nodemailer**.
 - **🛠️ Owner Dashboard**: Comprehensive management suite for hotel owners to manage rooms, bookings, and inquiries in real-time.
@@ -44,7 +44,7 @@
 - **Infrastructure**: [Google Cloud](https://cloud.google.com/) / [Vercel](https://vercel.com/)
 
 ### Third-Party Services
-- **Payments**: Stripe API
+- **Payments**: QR code
 - **Storage**: Cloudinary
 - **Webhooks**: Svix
 - **Email**: Nodemailer
