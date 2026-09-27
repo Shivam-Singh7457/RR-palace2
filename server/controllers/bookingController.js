@@ -11,9 +11,14 @@ export const checkAvailabilityAPI = async (req, res) => {
   console.log("📨 Received availability check request:", req.body);
   try {
     const { room, checkInDate, checkOutDate } = req.body;
-    const isAvailable = await checkRoomAvailability({ checkInDate, checkOutDate, room });
+    const result = await checkRoomAvailability({ checkInDate, checkOutDate, room });
+    const isAvailable = typeof result === "boolean" ? result : result.isAvailable;
     console.log("✔️ Availability result:", isAvailable);
-    res.json({ success: true, isAvailable });
+    res.json({
+      success: true,
+      isAvailable,
+      ...(typeof result === "object" ? result : {})
+    });
   } catch (error) {
     console.error("🔴 checkAvailabilityAPI Error:", error.message);
     res.json({ success: false, message: error.message });

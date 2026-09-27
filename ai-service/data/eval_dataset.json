@@ -1,0 +1,48 @@
+[
+  {
+    "id": "eval_01",
+    "query": "Who is the owner of Royal Rudraksh Palace?",
+    "expected_intent": "POLICY_FAQ",
+    "expected_keywords": [
+      "Sudhir Kumar Sharma",
+      "Rudraksh"
+    ]
+  },
+  {
+    "id": "eval_02",
+    "query": "What is the check-in time?",
+    "expected_intent": "POLICY_FAQ",
+    "expected_keywords": [
+      "2:00 PM",
+      "14:00"
+    ]
+  },
+  {
+    "id": "eval_03",
+    "query": "What room types do you have and what are their prices?",
+    "expected_intent": "ROOM_CATALOG",
+    "expected_keywords": [
+      "Deluxe",
+      "Suite",
+      "₹"
+    ]
+  },
+  {
+    "id": "eval_04",
+    "query": "Are Deluxe rooms available from 2026-10-01 to 2026-10-05?",
+    "expected_intent": "ROOM_AVAILABILITY",
+    "expected_keywords": [
+      "available",
+      "2026-10-01"
+    ]
+  },
+  {
+    "id": "eval_05",
+    "query": "Do you have a helicopter landing pad on the roof?",
+    "expected_intent": "POLICY_FAQ",
+    "expected_keywords": [
+      "don't have enough",
+      "front desk"
+    ]
+  }
+]

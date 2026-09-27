@@ -64,10 +64,12 @@ export const getRoom = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
+    const bookedRoomSet = new Set(bookedRooms.map(id => id.toString()));
+
     // Map rooms to include booking status
     const roomsWithStatus = rooms.map(room => ({
       ...room.toObject(),
-      isBooked: false // or handle as before
+      isBooked: bookedRoomSet.has(room._id.toString())
     }));
 
     res.json({ success: true, rooms: roomsWithStatus });

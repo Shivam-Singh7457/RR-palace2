@@ -23,6 +23,7 @@ import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import VerifyOTP from "./VerifyOTP";
 import ResetPassword from "./ResetPassword";
+import Chatbot from "../Components/Chatbot";
 
 // Helper component to handle Google OAuth callback success
 const LoginSuccess = () => {
@@ -71,9 +72,11 @@ const App=()=>{
           </Route>         
         </Routes>
       </div>
+      <Chatbot />
       <Footer />
     </div>
   )
 }
+
 
 export default App;

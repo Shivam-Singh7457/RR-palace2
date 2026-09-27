@@ -12,6 +12,7 @@ import bookingRouter from "./routes/bookingRoutes.js";
 import amenitiesRoutes from "./routes/amenitiesRoutes.js";
 import reviewRouter from "./routes/reviewRoutes.js";
 import authRouter from "./routes/authRoutes.js";
+import aiRouter from "./routes/aiRoutes.js";
 import { initCleanupTask } from "./utils/cleanupTask.js";
 
 // ✅ Initialize Cloudinary and Cleanup
@@ -61,6 +62,8 @@ app.use("/api/user", userRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/reviews", reviewRouter);
+app.use("/api/ai", aiRouter);
+
 
 // ✅ 404 Handler for undefined routes
 app.use((req, res) => {
