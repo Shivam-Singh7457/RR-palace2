@@ -345,3 +345,175 @@ export const cancelBookingByUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Cancellation failed" });
   }
 };
+
+export const cancelBookingByAI = async (req, res) => {
+  try {
+    const { bookingId, userId, email, previewOnly } = req.body;
+
+    let query = { status: { $ne: "cancelled" } };
+
+    if (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) {
+      query._id = bookingId;
+    } else if (bookingId) {
+      query.$or = [{ upiRefNumber: bookingId }];
+    } else if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      query.user = userId;
+    } else if (email) {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      query.user = user._id;
+    } else {
+      return res.status(400).json({ success: false, message: "Booking ID, User ID, or Email required." });
+    }
+
+    const booking = await Booking.findOne(query).sort({ createdAt: -1 }).populate("room hotel user");
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "No active booking found matching criteria." });
+    }
+
+    if (previewOnly) {
+      return res.json({
+        success: true,
+        previewOnly: true,
+        booking: {
+          _id: booking._id,
+          roomType: booking.room ? booking.room.roomType : "Standard Room",
+          checkInDate: booking.checkInDate,
+          checkOutDate: booking.checkOutDate,
+          totalPrice: booking.totalPrice,
+          status: booking.status
+        }
+      });
+    }
+
+    booking.status = "cancelled";
+    await booking.save();
+
+    if (booking.user && booking.user.email) {
+      sendEmail({
+        email: booking.user.email,
+        subject: "Booking Cancellation Confirmed – RR Palace",
+        html: `
+          <h2>Booking Cancellation Confirmation</h2>
+          <p>Dear ${booking.user.username || "Guest"},</p>
+          <p>Your booking has been successfully cancelled as requested.</p>
+          <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Hotel:</strong> ${booking.hotel ? booking.hotel.name : "Royal Rudraksh Palace"}</li>
+            <li><strong>Room:</strong> ${booking.room ? booking.room.roomType : "Standard Room"}</li>
+            <li><strong>Check-In:</strong> ${new Date(booking.checkInDate).toDateString()}</li>
+            <li><strong>Check-Out:</strong> ${new Date(booking.checkOutDate).toDateString()}</li>
+            <li><strong>Status:</strong> Cancelled</li>
+          </ul>
+          <p>We hope to welcome you another time!</p>
+        `,
+      }).catch((err) => {
+        console.error("🔴 AI Cancellation email error:", err.message);
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Booking successfully cancelled",
+      booking: {
+        _id: booking._id,
+        roomType: booking.room ? booking.room.roomType : "Standard Room",
+        checkInDate: booking.checkInDate,
+        checkOutDate: booking.checkOutDate,
+        totalPrice: booking.totalPrice,
+        status: booking.status
+      }
+    });
+  } catch (err) {
+    console.error("🔴 cancelBookingByAI Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal server error during cancellation" });
+  }
+};
+
+export const createBookingByAI = async (req, res) => {
+  console.log("📨 Received AI create booking request:", req.body);
+  try {
+    const { userId, email, room, checkInDate, checkOutDate, guests, roomType } = req.body;
+
+    let targetUser = null;
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      targetUser = await User.findById(userId);
+    }
+    if (!targetUser && email) {
+      targetUser = await User.findOne({ email });
+    }
+
+    if (!targetUser) {
+      return res.status(401).json({ success: false, message: "User not logged in or account not found." });
+    }
+
+    let targetRoomId = room;
+    if (!targetRoomId || !mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      const searchRoomType = roomType || room || "Deluxe";
+      const foundRoom = await Room.findOne({
+        roomType: { $regex: searchRoomType, $options: "i" },
+        isAvailable: true
+      });
+      if (!foundRoom) {
+        const anyRoom = await Room.findOne({ isAvailable: true });
+        if (!anyRoom) {
+          return res.status(404).json({ success: false, message: "No available room found in catalog." });
+        }
+        targetRoomId = anyRoom._id;
+      } else {
+        targetRoomId = foundRoom._id;
+      }
+    }
+
+    const { booking, roomData } = await createBookingService({
+      user: targetUser._id,
+      room: targetRoomId,
+      checkInDate,
+      checkOutDate,
+      guests: guests || 1,
+    });
+
+    console.log("✅ AI Booking created successfully. ID:", booking._id);
+
+    sendEmail({
+      email: targetUser.email,
+      subject: "Hotel Booking Details – Royal Rudraksh Palace",
+      html: `
+        <h2>Your Booking Details</h2>
+        <p>Dear ${targetUser.username},</p>
+        <p>Thank you for booking with Vedika AI! Here are your reservation details:</p>
+        <ul>
+          <li><strong>Booking ID:</strong> ${booking._id}</li>
+          <li><strong>Hotel Name:</strong> ${roomData.hotel ? roomData.hotel.name : "Royal Rudraksh Palace"}</li>
+          <li><strong>Location:</strong> ${roomData.hotel ? roomData.hotel.address : "Varanasi, India"}</li>
+          <li><strong>Check-In:</strong> ${booking.checkInDate.toDateString()}</li>
+          <li><strong>Check-Out:</strong> ${booking.checkOutDate.toDateString()}</li>
+          <li><strong>Booking Amount:</strong> ₹ ${booking.totalPrice}</li>
+        </ul>
+        <p>Please complete payment via UPI QR code.</p>
+      `,
+    }).catch((mailError) => {
+      console.error("🔴 Email failed in background:", mailError.message);
+    });
+
+    return res.json({
+      success: true,
+      message: "Booking created successfully",
+      booking: {
+        _id: booking._id,
+        roomType: roomData.roomType,
+        totalPrice: booking.totalPrice,
+        checkInDate: booking.checkInDate,
+        checkOutDate: booking.checkOutDate
+      }
+    });
+  } catch (error) {
+    console.error("🔴 AI Create booking error:", error.message);
+    return res.status(500).json({ success: false, message: error.message || "Booking creation failed" });
+  }
+};
+
+

@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     # MERN Backend Service Connection
     NODE_BACKEND_URL: str = "http://localhost:5000"
 
+    # LangSmith Tracing & Evaluation Settings
+    LANGSMITH_ENABLED: bool = True
+    LANGCHAIN_TRACING_V2: str = "true"
+    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGCHAIN_API_KEY: Optional[str] = None
+    LANGCHAIN_PROJECT: str = "rr-palace-ai-service"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

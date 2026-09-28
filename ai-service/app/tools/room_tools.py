@@ -157,3 +157,158 @@ class CheckRoomAvailabilityTool(BaseTool):
             "message": f"Unable to verify live room availability from reservation database.",
             "is_mock_fallback": True
         }
+
+
+class CancelBookingTool(BaseTool):
+    """
+    Tool to cancel an active booking in the reservation database.
+    """
+    @property
+    def name(self) -> str:
+        return "cancel_booking"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Cancels an active hotel booking in the reservation database using a booking ID, "
+            "user ID, or user email address."
+        )
+
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "booking_id": {
+                    "type": "string",
+                    "description": "Optional specific Booking ID or UPI Reference Number to cancel."
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "Optional User ID whose latest active booking should be cancelled."
+                },
+                "user_email": {
+                    "type": "string",
+                    "description": "Optional User Email whose latest active booking should be cancelled."
+                }
+            },
+            "required": []
+        }
+
+    async def execute(
+        self,
+        booking_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None,
+        preview_only: bool = False,
+        **kwargs
+    ) -> Dict[str, Any]:
+        url = f"{settings.NODE_BACKEND_URL}/api/bookings/ai-cancel"
+        payload = {
+            "bookingId": booking_id,
+            "userId": user_id,
+            "email": user_email,
+            "previewOnly": preview_only
+        }
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    return data
+                else:
+                    logger.warning(f"Backend returned HTTP {res.status_code} for AI cancellation.")
+                    try:
+                        err_data = res.json()
+                        return {"success": False, "message": err_data.get("message", "Cancellation failed.")}
+                    except Exception:
+                        return {"success": False, "message": f"Backend HTTP {res.status_code} error."}
+        except Exception as e:
+            logger.error(f"Error executing cancel_booking tool: {e}")
+            return {"success": False, "message": f"Connection error to backend: {str(e)}"}
+
+
+class CreateBookingTool(BaseTool):
+    """
+    Tool to create a room booking directly in the reservation database.
+    """
+    @property
+    def name(self) -> str:
+        return "create_booking"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Creates a live room booking in the reservation database for an authenticated user."
+        )
+
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "User ID of the guest creating the booking."
+                },
+                "user_email": {
+                    "type": "string",
+                    "description": "Email address of the guest creating the booking."
+                },
+                "room_type": {
+                    "type": "string",
+                    "description": "Room type to reserve (e.g., Deluxe King Room, Executive Suite)."
+                },
+                "check_in_date": {
+                    "type": "string",
+                    "description": "Check-in date in YYYY-MM-DD format."
+                },
+                "check_out_date": {
+                    "type": "string",
+                    "description": "Check-out date in YYYY-MM-DD format."
+                },
+                "guests": {
+                    "type": "integer",
+                    "description": "Number of guests (default 1)."
+                }
+            },
+            "required": ["check_in_date", "check_out_date"]
+        }
+
+    async def execute(
+        self,
+        check_in_date: str,
+        check_out_date: str,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None,
+        room_type: Optional[str] = None,
+        guests: int = 1,
+        **kwargs
+    ) -> Dict[str, Any]:
+        url = f"{settings.NODE_BACKEND_URL}/api/bookings/ai-book"
+        payload = {
+            "userId": user_id,
+            "email": user_email,
+            "roomType": room_type,
+            "checkInDate": check_in_date,
+            "checkOutDate": check_out_date,
+            "guests": guests
+        }
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    return data
+                else:
+                    logger.warning(f"Backend returned HTTP {res.status_code} for AI booking creation.")
+                    try:
+                        err_data = res.json()
+                        return {"success": False, "message": err_data.get("message", "Booking creation failed.")}
+                    except Exception:
+                        return {"success": False, "message": f"Backend HTTP {res.status_code} error."}
+        except Exception as e:
+            logger.error(f"Error executing create_booking tool: {e}")
+            return {"success": False, "message": f"Connection error to backend: {str(e)}"}
+
+

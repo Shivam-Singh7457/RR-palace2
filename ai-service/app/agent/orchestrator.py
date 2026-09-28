@@ -14,6 +14,7 @@ from app.guardrails.input_filter import input_guardrail
 from app.guardrails.output_filter import output_guardrail
 from app.cache.semantic_cache import semantic_cache
 from app.monitoring.logger import metrics_tracker
+from app.monitoring.tracing import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class AgentOrchestrator:
     8. Telemetry Metrics Recording & Cache Storage
     """
 
+    @traceable(name="AgentOrchestrator.process_chat", run_type="chain")
     async def process_chat(
         self,
         messages: Any,
@@ -184,7 +186,94 @@ class AgentOrchestrator:
                     ("\n".join(room_lines) if room_lines else "No rooms found.") + "\n"
                 )
 
+        # Branch 3: Booking Cancellation Intent
+        elif intent == IntentType.BOOKING_CANCELLATION:
+            booking_id = params.get("booking_id") or merged_slots.get("booking_id")
+            user_id = user.get("id") if user else None
+            user_email = user.get("email") if user else None
+            
+            is_confirmed = any(k in last_user_msg.lower() for k in [
+                "confirm cancellation", "confirm cancel", "yes cancel", "proceed with cancellation",
+                "yes, cancel booking", "confirm_cancel_id"
+            ])
+
+            if not is_confirmed:
+                # Preview booking details before asking for confirmation
+                preview_res = await tool_registry.execute_tool("cancel_booking", {
+                    "booking_id": booking_id,
+                    "user_id": user_id,
+                    "user_email": user_email,
+                    "preview_only": True
+                })
+
+                if preview_res.get("success") and preview_res.get("booking"):
+                    b_info = preview_res.get("booking", {})
+                    b_id = b_info.get("_id", booking_id or "Active Booking")
+                    b_room = b_info.get("roomType", "Room")
+                    cin_val = b_info.get("checkInDate", "")
+                    cout_val = b_info.get("checkOutDate", "")
+                    try:
+                        cin_str = datetime.strptime(str(cin_val)[:10], "%Y-%m-%d").strftime("%b %d, %Y") if cin_val else "N/A"
+                        cout_str = datetime.strptime(str(cout_val)[:10], "%Y-%m-%d").strftime("%b %d, %Y") if cout_val else "N/A"
+                    except Exception:
+                        cin_str, cout_str = cin_val, cout_val
+
+                    response_text = (
+                        f"⚠️ **Final Confirmation Required for Cancellation**:\n\n"
+                        f"Please review your booking details before cancelling:\n"
+                        f"• 📋 **Booking ID**: `{b_id}`\n"
+                        f"• 🏨 **Room Type**: {b_room}\n"
+                        f"• 📅 **Dates**: {cin_str} to {cout_str}\n"
+                        f"• 💰 **Total Amount**: ₹{b_info.get('totalPrice', 0):,}\n\n"
+                        f"Are you sure you want to cancel this booking? Please click **Yes, Cancel Booking** on screen to proceed."
+                    )
+                    booking_action = {
+                        "type": "CONFIRM_CANCELLATION_PROMPT",
+                        "title": f"Cancel Booking #{str(b_id)[:8]}...",
+                        "params": {
+                            "booking_id": str(b_id),
+                            "room_type": b_room,
+                            "total_price": b_info.get("totalPrice", 0)
+                        }
+                    }
+                else:
+                    err_msg = preview_res.get("message", "No active booking found matching your request.")
+                    response_text = (
+                        f"❌ **Unable to Find Active Booking to Cancel**:\n\n"
+                        f"{err_msg}\n\n"
+                        f"Please make sure you are logged in to your account or provide a valid Booking ID / Reference Number."
+                    )
+            else:
+                # User HAS confirmed cancellation
+                tool_res = await tool_registry.execute_tool("cancel_booking", {
+                    "booking_id": booking_id,
+                    "user_id": user_id,
+                    "user_email": user_email,
+                    "preview_only": False
+                })
+
+                if tool_res.get("success"):
+                    b_info = tool_res.get("booking", {})
+                    b_id = b_info.get("_id", booking_id or "Active Booking")
+                    b_room = b_info.get("roomType", "Room")
+                    response_text = (
+                        f"✅ **Booking Cancellation Confirmed**:\n\n"
+                        f"• 📋 **Booking ID**: {b_id}\n"
+                        f"• 🏨 **Room Type**: {b_room}\n"
+                        f"• ⚡ **Status**: Cancelled in Reservation System\n\n"
+                        f"Your booking has been successfully cancelled, the room lock has been released, "
+                        f"and a confirmation email has been sent to your registered address."
+                    )
+                else:
+                    err_msg = tool_res.get("message", "No active booking found matching your request.")
+                    response_text = (
+                        f"❌ **Unable to Cancel Booking**:\n\n"
+                        f"{err_msg}\n\n"
+                        f"Please make sure you are logged in to your account or provide a valid Booking ID / Reference Number."
+                    )
+
         # If LLM execution is active and tool_context_str or RAG context is built
+
         if not ('response_text' in locals()):
             raw_context = default_retriever.retrieve(last_user_msg, top_k=3)
             context_chunks = truncate_rag_context(raw_context, max_total_chars=1200)
@@ -227,7 +316,9 @@ class AgentOrchestrator:
         final_response_text = output_res["sanitized_text"]
 
         # 4. Construct Automated Booking Action Payload & Summary Breakdown
-        booking_action = None
+        if 'booking_action' not in locals():
+            booking_action = None
+
         if intent == IntentType.ROOM_AVAILABILITY:
             check_in = merged_slots.get("check_in_date")
             check_out = merged_slots.get("check_out_date")
@@ -257,9 +348,9 @@ class AgentOrchestrator:
                             "please **Log In** to your account first. Click **Log In to Complete Booking** below!"
                         )
                 else:
-                    # User IS logged in -> Show complete breakdown
                     user_email = user.get("email") or user.get("username", "Guest")
-                    # Determine exact price_per_night from tool execution (live DB data)
+                    user_id = user.get("id")
+                    
                     price_per_night = 1800
                     if 'tool_res' in locals() and isinstance(tool_res, dict):
                         avail_list = tool_res.get("available_rooms", [])
@@ -282,29 +373,91 @@ class AgentOrchestrator:
 
                     total_amount = price_per_night * nights
 
-                    booking_action = {
-                        "type": "NAVIGATE_TO_BOOKING",
-                        "title": f"Reserve {room_type} (₹{total_amount:,})",
-                        "params": {
+                    is_confirmed_booking = any(k in last_user_msg.lower() for k in [
+                        "confirm booking", "confirm reservation", "yes book", "proceed with booking",
+                        "yes, book room", "confirm_booking_room"
+                    ])
+
+                    if not is_confirmed_booking:
+                        # Present Final Booking Confirmation Prompt on screen before creating live booking
+                        booking_action = {
+                            "type": "CONFIRM_BOOKING_PROMPT",
+                            "title": f"Confirm & Book {room_type} (₹{total_amount:,})",
+                            "params": {
+                                "room_type": room_type,
+                                "check_in_date": check_in,
+                                "check_out_date": check_out,
+                                "guests": 1,
+                                "total_amount": total_amount
+                            }
+                        }
+                        confirmation_summary = (
+                            f"\n\n📋 **Final Booking Confirmation Required**:\n"
+                            f"Please review your reservation details below:\n"
+                            f"• 🏨 **Room Type**: {room_type}\n"
+                            f"• 👤 **Guest Email**: {user_email}\n"
+                            f"• 📅 **Check-In**: {check_in} (IST)\n"
+                            f"• 📅 **Check-Out**: {check_out} ({nights} night{'s' if nights != 1 else ''})\n"
+                            f"• 💰 **Total Booking Amount**: ₹{total_amount:,}\n\n"
+                            f"Click **Confirm & Book Room ➔** below to finalize your booking!"
+                        )
+                        if "Final Booking Confirmation Required" not in final_response_text:
+                            final_response_text += confirmation_summary
+                    else:
+                        # User HAS confirmed booking -> Execute automated room booking creation
+                        create_res = await tool_registry.execute_tool("create_booking", {
+                            "user_id": user_id,
+                            "user_email": user_email,
                             "room_type": room_type,
                             "check_in_date": check_in,
                             "check_out_date": check_out,
-                            "email": user_email,
-                            "total_amount": total_amount
-                        }
-                    }
+                            "guests": 1
+                        })
 
-                    summary_box = (
-                        f"\n\n📋 **Booking Breakdown & Confirmation**:\n"
-                        f"• 👤 **Guest Email**: {user_email}\n"
-                        f"• 🏨 **Room Type**: {room_type}\n"
-                        f"• 📅 **Check-In**: {check_in} (IST)\n"
-                        f"• 📅 **Check-Out**: {check_out} ({nights} night{'s' if nights != 1 else ''})\n"
-                        f"• 💰 **Total Booking Amount**: ₹{total_amount:,}\n\n"
-                        f"Click **Reserve Room Now ➔** below to complete your reservation!"
-                    )
-                    if user_email not in final_response_text:
-                        final_response_text += summary_box
+                        if create_res.get("success"):
+                            created_booking = create_res.get("booking", {})
+                            b_id = created_booking.get("_id", "N/A")
+
+                            booking_action = {
+                                "type": "NAVIGATE_TO_PAYMENT",
+                                "title": f"Pay Now via UPI QR Code (₹{total_amount:,})",
+                                "params": {
+                                    "booking_id": b_id,
+                                    "room_type": room_type,
+                                    "check_in_date": check_in,
+                                    "check_out_date": check_out,
+                                    "email": user_email,
+                                    "total_amount": total_amount
+                                }
+                            }
+
+                            summary_box = (
+                                f"\n\n🎉 **Room Booking Created Successfully!**\n"
+                                f"• 📋 **Booking ID**: {b_id}\n"
+                                f"• 👤 **Guest Email**: {user_email}\n"
+                                f"• 🏨 **Room Type**: {room_type}\n"
+                                f"• 📅 **Check-In**: {check_in} (IST)\n"
+                                f"• 📅 **Check-Out**: {check_out} ({nights} night{'s' if nights != 1 else ''})\n"
+                                f"• 💰 **Total Booking Amount**: ₹{total_amount:,}\n\n"
+                                f"Click **Pay via UPI QR Code ➔** below to complete your payment!"
+                            )
+                            if user_email not in final_response_text:
+                                final_response_text += summary_box
+                        else:
+                            booking_action = {
+                                "type": "NAVIGATE_TO_BOOKING",
+                                "title": f"Reserve {room_type} (₹{total_amount:,})",
+                                "params": {
+                                    "room_type": room_type,
+                                    "check_in_date": check_in,
+                                    "check_out_date": check_out,
+                                    "email": user_email,
+                                    "total_amount": total_amount
+                                }
+                            }
+                            if user_email not in final_response_text:
+                                final_response_text += f"\n\nClick **Reserve Room Now ➔** below to view room details!"
+
 
         # 5. Record Execution Telemetry Metrics
         latency_ms = (time.time() - start_time) * 1000

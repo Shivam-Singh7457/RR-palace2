@@ -12,7 +12,9 @@ class IntentType:
     ROOM_AVAILABILITY = "ROOM_AVAILABILITY"
     ROOM_CATALOG = "ROOM_CATALOG"
     POLICY_FAQ = "POLICY_FAQ"
+    BOOKING_CANCELLATION = "BOOKING_CANCELLATION"
     GENERAL_CONVERSATION = "GENERAL_CONVERSATION"
+
 
 
 def get_ist_today() -> datetime.date:
@@ -177,10 +179,32 @@ def classify_intent(user_message: str) -> Dict[str, Any]:
     if room_type:
         extracted_params["room_type"] = room_type
 
+    # Extract booking ID or reference string if present (e.g. 24-char ObjectId or booking id pattern)
+    booking_id_match = re.search(r"\b([0-9a-fA-F]{24})\b", user_message)
+    if not booking_id_match:
+        booking_id_match = re.search(r"(?:booking|ref|id|reservation)\s*#?\s*([a-zA-Z0-9_-]{5,30})", text_lower)
+    if booking_id_match:
+        extracted_params["booking_id"] = booking_id_match.group(1)
+
+    # 0. Check for explicit Booking Cancellation action intent first
+    cancel_action_phrases = [
+        "cancel my", "cancel booking", "cancel room", "cancel reservation", "cancel stay",
+        "i want to cancel", "please cancel", "cancellation of my", "cancellation of booking",
+        "want to cancel my", "like to cancel", "cancellation request"
+    ]
+    is_policy_inquiry = "policy" in text_lower or "rules" in text_lower or "how to cancel" in text_lower or "cancellation policy" in text_lower or "can i cancel" in text_lower
+    
+    if (any(p in text_lower for p in cancel_action_phrases) or ("cancel" in text_lower and "booking_id" in extracted_params)) and not is_policy_inquiry:
+        return {
+            "intent": IntentType.BOOKING_CANCELLATION,
+            "params": extracted_params,
+            "confidence": 0.98
+        }
+
     # 1. Knowledge Base / Policy / FAQ Intent (Check policy keywords first to prevent overlap)
     policy_keywords = [
         "check-in time", "check in time", "checkout time", "check out time", "policy", "policies", "rules", "owner",
-        "who owns", "who is the owner", "cancel", "cancellation", "refund", "pet", "smoke", "smoking",
+        "who owns", "who is the owner", "cancellation policy", "refund policy", "pet", "smoke", "smoking",
         "wifi", "internet", "parking", "address", "location", "spa", "pool", "food", "dining"
     ]
     if any(k in text_lower for k in policy_keywords):
@@ -189,6 +213,7 @@ def classify_intent(user_message: str) -> Dict[str, Any]:
             "params": extracted_params,
             "confidence": 0.95
         }
+
 
     # 2. Room Catalog / Price Query Intent
     catalog_keywords = ["prices", "price", "cost", "rates", "how much", "room types", "room type", "catalog", "options"]

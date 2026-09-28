@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, List, Any, Optional
 from app.tools.base import BaseTool
-from app.tools.room_tools import GetRoomCatalogTool, CheckRoomAvailabilityTool
+from app.tools.room_tools import GetRoomCatalogTool, CheckRoomAvailabilityTool, CancelBookingTool, CreateBookingTool
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,10 @@ class ToolRegistry:
     def _register_default_tools(self):
         self.register(GetRoomCatalogTool())
         self.register(CheckRoomAvailabilityTool())
+        self.register(CancelBookingTool())
+        self.register(CreateBookingTool())
+
+
 
     def register(self, tool: BaseTool):
         self._tools[tool.name] = tool

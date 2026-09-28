@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Dict, Any, List
 from app.agent.orchestrator import default_orchestrator
+from app.monitoring.tracing import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class RAGEvaluator:
         with open(EVAL_DATASET_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
 
+    @traceable(name="RAGEvaluator.run_evaluation", run_type="chain")
     async def run_evaluation(self) -> Dict[str, Any]:
 
         dataset = self.load_dataset()

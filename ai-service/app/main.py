@@ -15,11 +15,16 @@ logging.basicConfig(
 logger = logging.getLogger("ai_service")
 
 from contextlib import asynccontextmanager
+from app.monitoring.tracing import setup_langsmith_env
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.SERVICE_NAME} v{settings.VERSION} [ENV={settings.ENV}]")
     logger.info(f"Active LLM Provider mode: {settings.LLM_PROVIDER}")
+    if setup_langsmith_env():
+        logger.info(f"[LangSmith] Active Tracing enabled for project '{settings.LANGCHAIN_PROJECT}'")
+    else:
+        logger.warning("[LangSmith] Tracing INACTIVE: LANGCHAIN_API_KEY is not set or empty in .env")
     yield
 
 # Initialize FastAPI App

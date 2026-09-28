@@ -14,10 +14,12 @@ import reviewRouter from "./routes/reviewRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import aiRouter from "./routes/aiRoutes.js";
 import { initCleanupTask } from "./utils/cleanupTask.js";
+import { initAIKeepAlive } from "./utils/aiKeepAlive.js";
 
-// ✅ Initialize Cloudinary and Cleanup
+// ✅ Initialize Cloudinary, Cleanup, and AI Service Keep-Alive
 connectCloudinary();
 initCleanupTask();
+initAIKeepAlive();
 
 const app = express();
 // ✅ CORS Configuration

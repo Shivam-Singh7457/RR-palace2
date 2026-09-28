@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from app.config.settings import settings
 from app.rag.embeddings import embed_text
 from app.rag.ingestion import COLLECTION_NAME, ingest_knowledge_base
+from app.monitoring.tracing import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class RAGRetriever:
         self.db_name = settings.MONGODB_DB_NAME
         self.collection_name = COLLECTION_NAME
 
+    @traceable(name="RAGRetriever.retrieve", run_type="retriever")
     def retrieve(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """
         Retrieves top K most relevant text chunks for a given query.

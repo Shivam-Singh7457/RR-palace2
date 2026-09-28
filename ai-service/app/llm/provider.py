@@ -4,6 +4,7 @@ from typing import List
 from app.llm.base import BaseLLMProvider
 from app.models.schemas import ChatMessage
 from app.config.settings import settings
+from app.monitoring.tracing import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ class GeminiLLMProvider(BaseLLMProvider):
     def model_name(self) -> str:
         return self._model
 
+    @traceable(name="GeminiLLMProvider.generate_response", run_type="llm")
     async def generate_response(
         self,
         messages: List[ChatMessage],

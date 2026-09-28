@@ -1,3 +1,5 @@
+import { pingAIService } from "../utils/aiKeepAlive.js";
+
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
 export const chatWithAI = async (req, res) => {
@@ -36,6 +38,8 @@ export const chatWithAI = async (req, res) => {
     return res.status(200).json(data);
   } catch (error) {
     console.error("🔴 AI Service Proxy Error:", error.message);
+    // Trigger background ping/wakeup attempt
+    pingAIService().catch(() => {});
 
     // Graceful fallback if AI service is offline
     return res.status(200).json({
@@ -66,6 +70,7 @@ export const streamChatWithAI = async (req, res) => {
     });
 
     if (!pyRes.ok) {
+      pingAIService().catch(() => {});
       res.write(`data: ${JSON.stringify({ error: "AI service error" })}\n\n`);
       return res.end();
     }
@@ -81,6 +86,7 @@ export const streamChatWithAI = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("🔴 AI Stream Proxy Error:", error.message);
+    pingAIService().catch(() => {});
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }

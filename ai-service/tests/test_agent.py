@@ -81,3 +81,25 @@ def test_chat_endpoint_agent_integration():
     data = response.json()
     assert data["success"] is True
     assert "₹" in data["message"]["content"]
+
+
+def test_cancellation_intent():
+    res1 = classify_intent("Please cancel my booking")
+    assert res1["intent"] == IntentType.BOOKING_CANCELLATION
+
+    res2 = classify_intent("I want to cancel booking 66e812345678901234567890")
+    assert res2["intent"] == IntentType.BOOKING_CANCELLATION
+    assert res2["params"].get("booking_id") == "66e812345678901234567890"
+
+    # Ensure FAQ inquiries still route to POLICY_FAQ
+    res3 = classify_intent("What is the cancellation policy?")
+    assert res3["intent"] == IntentType.POLICY_FAQ
+
+
+@pytest.mark.asyncio
+async def test_agent_cancellation_orchestration():
+    messages = [{"role": "user", "content": "I want to cancel my booking ID 66e812345678901234567890"}]
+    res = await default_orchestrator.process_chat(messages, user={"id": "user123", "email": "test@example.com"})
+    assert res["intent"] == IntentType.BOOKING_CANCELLATION
+    assert "Cancellation" in res["response"] or "Cancel" in res["response"]
+

@@ -100,6 +100,29 @@ export const Chatbot = () => {
     window.location.href = "/login";
   };
 
+  const handlePaymentAction = (action) => {
+    if (!action || !action.params) return;
+    const { booking_id } = action.params;
+    if (booking_id) {
+      window.location.href = `/contact?payment=true&bookingId=${booking_id}`;
+    } else {
+      window.location.href = `/my-bookings`;
+    }
+  };
+
+  const handleConfirmBookingPrompt = (action) => {
+    if (!action || !action.params) return;
+    const { room_type, check_in_date, check_out_date } = action.params;
+    handleSendMessage(`Confirm booking for ${room_type || 'Room'} from ${check_in_date} to ${check_out_date}`);
+  };
+
+  const handleConfirmCancellationPrompt = (action) => {
+    if (!action || !action.params) return;
+    const { booking_id } = action.params;
+    handleSendMessage(`Confirm cancellation of booking ${booking_id}`);
+  };
+
+
   const handleSendMessage = async (textToSend) => {
     const text = textToSend || inputValue;
     if (!text.trim() || isLoading) return;
@@ -309,6 +332,85 @@ export const Chatbot = () => {
                         </button>
                       </div>
                     )}
+
+                    {/* 1-Click UPI Payment Action Card */}
+                    {msg.action && msg.action.type === "NAVIGATE_TO_PAYMENT" && (
+                      <div className="rr-action-card" style={{ borderColor: "#16a34a", backgroundColor: "#f0fdf4" }}>
+                        <div className="rr-action-card-header" style={{ color: "#15803d" }}>
+                          <span>💳</span>
+                          <strong>Booking Created – UPI Payment Ready</strong>
+                        </div>
+                        <p style={{ margin: "4px 0 10px 0", fontSize: "13px", color: "#166534" }}>
+                          {msg.action.title}
+                        </p>
+                        <button
+                          className="rr-action-card-btn"
+                          style={{ backgroundColor: "#16a34a", color: "#ffffff" }}
+                          onClick={() => handlePaymentAction(msg.action)}
+                        >
+                          Pay via UPI QR Code ➔
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Booking Confirmation Action Card */}
+                    {msg.action && msg.action.type === "CONFIRM_BOOKING_PROMPT" && (
+                      <div className="rr-action-card" style={{ borderColor: "#b8860b", backgroundColor: "#fffdf5" }}>
+                        <div className="rr-action-card-header" style={{ color: "#8a6110" }}>
+                          <span>📋</span>
+                          <strong>Final Booking Confirmation Required</strong>
+                        </div>
+                        <p style={{ margin: "4px 0 10px 0", fontSize: "13px", color: "#634710" }}>
+                          {msg.action.title}
+                        </p>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+                          <button
+                            className="rr-action-card-btn"
+                            style={{ backgroundColor: "#16a34a", color: "#ffffff", flex: "1" }}
+                            onClick={() => handleConfirmBookingPrompt(msg.action)}
+                          >
+                            Confirm & Book Room ➔
+                          </button>
+                          <button
+                            className="rr-action-card-btn"
+                            style={{ backgroundColor: "#9ca3af", color: "#ffffff", flex: "0 0 auto", padding: "8px 14px" }}
+                            onClick={() => handleSendMessage("Cancel booking request")}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cancellation Confirmation Action Card */}
+                    {msg.action && msg.action.type === "CONFIRM_CANCELLATION_PROMPT" && (
+                      <div className="rr-action-card" style={{ borderColor: "#dc2626", backgroundColor: "#fef2f2" }}>
+                        <div className="rr-action-card-header" style={{ color: "#b91c1c" }}>
+                          <span>⚠️</span>
+                          <strong>Confirm Booking Cancellation</strong>
+                        </div>
+                        <p style={{ margin: "4px 0 10px 0", fontSize: "13px", color: "#991b1b" }}>
+                          {msg.action.title}
+                        </p>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+                          <button
+                            className="rr-action-card-btn"
+                            style={{ backgroundColor: "#dc2626", color: "#ffffff", flex: "1" }}
+                            onClick={() => handleConfirmCancellationPrompt(msg.action)}
+                          >
+                            Yes, Cancel Booking ➔
+                          </button>
+                          <button
+                            className="rr-action-card-btn"
+                            style={{ backgroundColor: "#9ca3af", color: "#ffffff", flex: "0 0 auto", padding: "8px 14px" }}
+                            onClick={() => handleSendMessage("Keep my booking")}
+                          >
+                            Keep My Booking
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               ))}

@@ -196,18 +196,43 @@ const MyBookings = () => {
       {/* Cancellation Confirmation Modal */}
       {showCancelConfirmation && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 space-y-6 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-5 animate-in fade-in zoom-in duration-200">
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-gray-900">Cancel Booking?</h2>
-              <p className="text-gray-500">Do you really want to cancel this booking? This action cannot be undone.</p>
+              <p className="text-xs text-gray-500">Please review your booking details before confirming cancellation.</p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            {(() => {
+              const b = bookings.find(item => item._id === bookingToCancel);
+              if (!b) return null;
+              return (
+                <div className="bg-gray-50 rounded-xl p-3 text-xs space-y-1.5 border border-gray-100">
+                  <div className="flex justify-between font-semibold text-gray-800">
+                    <span>Room:</span>
+                    <span>{b.room?.roomType || "Standard Room"}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Check-In:</span>
+                    <span>{b.checkInDate ? new Date(b.checkInDate).toDateString() : "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Check-Out:</span>
+                    <span>{b.checkOutDate ? new Date(b.checkOutDate).toDateString() : "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-red-600 pt-1 border-t border-gray-200">
+                    <span>Amount:</span>
+                    <span>₹ {b.totalPrice || 0}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex flex-col gap-2.5">
               <button 
                 onClick={cancelBooking}
                 disabled={cancelLoading}
@@ -219,7 +244,7 @@ const MyBookings = () => {
               <button 
                 onClick={() => !cancelLoading && setShowCancelConfirmation(false)}
                 disabled={cancelLoading}
-                className={`w-full text-gray-500 py-2 text-sm font-medium transition-colors ${cancelLoading ? "opacity-50 cursor-not-allowed" : "hover:text-gray-800"}`}
+                className={`w-full text-gray-500 py-2 text-xs font-medium transition-colors ${cancelLoading ? "opacity-50 cursor-not-allowed" : "hover:text-gray-800"}`}
               >
                 No, Keep My Booking
               </button>
