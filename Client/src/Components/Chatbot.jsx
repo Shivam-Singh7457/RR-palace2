@@ -41,11 +41,14 @@ export const Chatbot = () => {
       }
     ]);
 
-    // Trigger grow-up animation & pop-up message on initial page load
+    // Trigger grow-up animation & pop-up message on initial page load & warm up AI service
     setIsGrowing(true);
     const popupTimer = setTimeout(() => {
       setShowGreetingPopup(true);
     }, 600);
+
+    // Warm up backend AI service in background
+    axios.get(`${API_BASE_URL}/api/ai/health`).catch(() => {});
 
     return () => clearTimeout(popupTimer);
   }, []);
@@ -133,37 +136,65 @@ export const Chatbot = () => {
     setInputValue("");
     setIsLoading(true);
 
-    try {
-      const userPayload = user ? { id: user._id, email: user.email, username: user.username } : null;
-      const response = await axios.post(`${API_BASE_URL}/api/ai/chat`, {
-        messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-        session_id: sessionId,
-        user: userPayload
-      });
+    const userPayload = user ? { id: user._id, email: user.email, username: user.username } : null;
 
-      if (response.data && response.data.message) {
-        const assistantMsg = {
-          role: response.data.message.role,
-          content: response.data.message.content,
-          action: response.data.action || null
-        };
-        setMessages(prev => [...prev, assistantMsg]);
-      } else {
-        setMessages(prev => [
-          ...prev,
-          { role: "assistant", content: "I apologize, but I could not retrieve a response right now. Please try again or contact our front desk." }
-        ]);
+    let responseData = null;
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const res = await axios.post(`${API_BASE_URL}/api/ai/chat`, {
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          session_id: sessionId,
+          user: userPayload
+        }, { timeout: 25000 });
+
+        if (res.data && res.data.message) {
+          responseData = res.data;
+          break;
+        }
+      } catch (error) {
+        console.warn(`Chat attempt ${attempt}/${maxAttempts} failed:`, error.message);
+        const status = error.response?.status;
+        const isWakingUp = status === 503 || error.code === 'ECONNABORTED' || !error.response;
+
+        if (isWakingUp && attempt < maxAttempts) {
+          setMessages(prev => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.isStatusMsg) {
+              last.content = `Vedika AI is starting up... Retrying connection (${attempt}/${maxAttempts})`;
+              return copy;
+            } else {
+              return [...copy, { role: "assistant", content: `Vedika AI is starting up... Retrying connection (${attempt}/${maxAttempts})`, isStatusMsg: true }];
+            }
+          });
+          await new Promise(r => setTimeout(r, 4000));
+        } else {
+          break;
+        }
       }
-    } catch (error) {
-      console.error("Chat Error:", error);
+    }
+
+    // Remove status message
+    setMessages(prev => prev.filter(m => !m.isStatusMsg));
+
+    if (responseData && responseData.message) {
+      const assistantMsg = {
+        role: responseData.message.role,
+        content: responseData.message.content,
+        action: responseData.action || null
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+    } else {
       setMessages(prev => [
         ...prev,
-        { role: "assistant", content: "I am having trouble connecting to the reservation service. Please contact our front desk." }
+        { role: "assistant", content: "I am having trouble connecting to the reservation service. The backend service may be restarting. Please wait a moment and try again." }
       ]);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
+
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {

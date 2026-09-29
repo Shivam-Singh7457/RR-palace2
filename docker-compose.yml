@@ -43,7 +43,8 @@ services:
       - ./server/.env
     restart: always
     depends_on:
-      - ai-service
+      ai-service:
+        condition: service_healthy
     networks:
       - rr_network
 
