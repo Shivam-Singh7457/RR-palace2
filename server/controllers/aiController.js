@@ -23,7 +23,7 @@ export const chatWithAI = async (req, res) => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per attempt
+        const timeoutId = setTimeout(() => controller.abort(), 40000); // 40s timeout per attempt for Render cold-starts
 
         response = await fetch(`${AI_SERVICE_URL}/chat`, {
           method: "POST",
@@ -53,7 +53,7 @@ export const chatWithAI = async (req, res) => {
       }
 
       if (attempt < maxAttempts) {
-        pingAIService(1).catch(() => {});
+        pingAIService(1, 3000, 45000).catch(() => {});
         await new Promise((res) => setTimeout(res, 2500));
       }
     }
@@ -62,7 +62,7 @@ export const chatWithAI = async (req, res) => {
   } catch (error) {
     console.error("🔴 AI Service Proxy Error:", error.message);
     // Trigger background ping/wakeup attempt
-    pingAIService(2, 3000).catch(() => {});
+    pingAIService(2, 3000, 45000).catch(() => {});
 
     // Return HTTP 503 so client knows AI service is waking up and can auto-retry
     return res.status(503).json({
@@ -76,7 +76,7 @@ export const chatWithAI = async (req, res) => {
 export const checkAIHealth = async (req, res) => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for health check during cold start
     const response = await fetch(`${AI_SERVICE_URL}/health`, { method: "GET", signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -84,11 +84,11 @@ export const checkAIHealth = async (req, res) => {
       const data = await response.json();
       return res.status(200).json({ success: true, ai_service: "online", details: data });
     } else {
-      pingAIService(2, 3000).catch(() => {});
+      pingAIService(2, 3000, 45000).catch(() => {});
       return res.status(503).json({ success: false, ai_service: "offline", status: response.status });
     }
   } catch (error) {
-    pingAIService(2, 3000).catch(() => {});
+    pingAIService(2, 3000, 45000).catch(() => {});
     return res.status(503).json({ success: false, ai_service: "waking_up", error: error.message });
   }
 };
@@ -110,7 +110,7 @@ export const streamChatWithAI = async (req, res) => {
     });
 
     if (!pyRes.ok) {
-      pingAIService(2, 3000).catch(() => {});
+      pingAIService(2, 3000, 45000).catch(() => {});
       res.write(`data: ${JSON.stringify({ error: "AI service error" })}\n\n`);
       return res.end();
     }
@@ -126,7 +126,7 @@ export const streamChatWithAI = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("🔴 AI Stream Proxy Error:", error.message);
-    pingAIService(2, 3000).catch(() => {});
+    pingAIService(2, 3000, 45000).catch(() => {});
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }

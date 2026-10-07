@@ -14,7 +14,7 @@ import reviewRouter from "./routes/reviewRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import aiRouter from "./routes/aiRoutes.js";
 import { initCleanupTask } from "./utils/cleanupTask.js";
-import { initAIKeepAlive } from "./utils/aiKeepAlive.js";
+import { initAIKeepAlive, aiWakeupMiddleware } from "./utils/aiKeepAlive.js";
 
 // ✅ Initialize Cloudinary, Cleanup, and AI Service Keep-Alive
 connectCloudinary();
@@ -22,6 +22,9 @@ initCleanupTask();
 initAIKeepAlive();
 
 const app = express();
+
+// ✅ Automatically wake up / warm up AI service whenever backend system is called
+app.use(aiWakeupMiddleware);
 // ✅ CORS Configuration
 const allowedOrigins = [
   process.env.CLIENT_URL,

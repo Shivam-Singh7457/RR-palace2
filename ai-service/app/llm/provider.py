@@ -49,10 +49,9 @@ class GeminiLLMProvider(BaseLLMProvider):
     Google Gemini API Provider using official google-genai SDK.
     """
 
-    def __init__(self, api_key: str, model: str = "gemini-3.6-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash-lite"):
         self.api_key = api_key
-        # Automatically use supported gemini-3.6-flash if legacy model name passed
-        self._model = "gemini-3.6-flash" if "2.5" in model or "1.5" in model else model
+        self._model = model if model else "gemini-3.5-flash-lite"
         try:
             from google import genai
             self.client = genai.Client(api_key=self.api_key)
@@ -92,8 +91,7 @@ class GeminiLLMProvider(BaseLLMProvider):
             self._model,
             "gemini-3.5-flash-lite",
             "gemini-3.5-flash",
-            "gemini-flash-latest",
-            "gemini-3.6-flash"
+            "gemini-flash-latest"
         ]
         # Remove duplicates while maintaining order
         models_to_try = list(dict.fromkeys(models_to_try))
@@ -148,7 +146,12 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         full_prompt = "\n".join(prompt_parts)
 
-        models_to_try = [self._model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest", "gemini-3.6-flash"]
+        models_to_try = [
+            self._model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ]
         models_to_try = list(dict.fromkeys(models_to_try))
 
         for m in models_to_try:

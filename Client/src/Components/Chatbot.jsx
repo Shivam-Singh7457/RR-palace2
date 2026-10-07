@@ -147,7 +147,7 @@ export const Chatbot = () => {
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           session_id: sessionId,
           user: userPayload
-        }, { timeout: 25000 });
+        }, { timeout: 45000 });
 
         if (res.data && res.data.message) {
           responseData = res.data;

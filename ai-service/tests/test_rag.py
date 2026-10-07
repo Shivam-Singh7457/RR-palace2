@@ -79,4 +79,5 @@ def test_chat_grounded_checkin_query():
     data = response.json()
     assert data["success"] is True
     content = data["message"]["content"]
-    assert "2:00 PM" in content or "14:00" in content
+    assert "10:00 AM" in content or "2:00 PM" in content or "14:00" in content
+

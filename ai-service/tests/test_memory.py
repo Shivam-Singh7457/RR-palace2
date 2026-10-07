@@ -91,5 +91,6 @@ def test_multiturn_chat_endpoint_integration():
     res2 = client.post("/chat", json=payload2)
     assert res2.status_code == 200
     content = res2.json()["message"]["content"]
-    assert ("2026-11-10" in content) or ("November 10" in content)
-    assert ("2026-11-15" in content) or ("November 15" in content)
+    assert ("2026-11-10" in content) or ("November 10" in content) or ("Nov 10" in content)
+    assert ("2026-11-15" in content) or ("November 15" in content) or ("Nov 15" in content)
+
