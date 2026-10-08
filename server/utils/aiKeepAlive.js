@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { ensureAIServiceRunning } from "./aiLauncher.js";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 let lastPingTimestamp = 0;
@@ -41,6 +42,11 @@ export const pingAIService = async (maxRetries = 2, retryIntervalMs = 4000, time
         }
       } catch (error) {
         console.warn(`[AI Keep-Alive] Attempt ${attempt}/${maxRetries}: Ping failed (${error.message}).`);
+      }
+
+      // If local and failed, attempt auto-starting Python process
+      if (AI_SERVICE_URL.includes("localhost") || AI_SERVICE_URL.includes("127.0.0.1")) {
+        await ensureAIServiceRunning().catch(() => {});
       }
 
       if (attempt < maxRetries) {
@@ -101,20 +107,29 @@ export const aiWakeupMiddleware = (req, res, next) => {
 /**
  * Initializes the automated ping & warm-up task for the AI service.
  * - Runs a multi-attempt wake-up loop asynchronously at backend startup.
- * - Runs recurring ping every 3 minutes to prevent free tier sleeping.
+ * - Auto-spawns local Python AI service process if offline.
+ * - Runs recurring ping every 10 minutes to maintain keep-alive.
  */
-export const initAIKeepAlive = () => {
-  console.log("[AI Keep-Alive] Initializing AI service warm-up and ping schedule...");
+export const initAIKeepAlive = async () => {
+  console.log("[AI Keep-Alive] Initializing AI service warm-up, auto-start, and ping schedule...");
 
-  // 1. Asynchronously wake up / warm up AI Service with retries at startup
+  // 1. If local, ensure local Python AI service is launched immediately
+  if (AI_SERVICE_URL.includes("localhost") || AI_SERVICE_URL.includes("127.0.0.1")) {
+    await ensureAIServiceRunning().catch((err) => {
+      console.error("[AI Keep-Alive] Auto-start check failed:", err.message);
+    });
+  }
+
+  // 2. Asynchronously wake up / warm up AI Service with retries at startup
   pingAIService(3, 4000, 45000).catch((err) => {
     console.error("[AI Keep-Alive] Startup wake-up failed:", err.message);
   });
 
-  // 2. Schedule recurring ping every 10 minutes to maintain keep-alive while preserving Render free tier hours
+  // 3. Schedule recurring ping every 10 minutes to maintain keep-alive
   cron.schedule("*/10 * * * *", () => {
     pingAIService(1, 3000, 30000).catch(() => {});
   });
 };
+
 
 

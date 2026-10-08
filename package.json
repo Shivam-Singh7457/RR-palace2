@@ -1,0 +1,16 @@
+{
+  "name": "rr-palace-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Royal Rudraksh Palace - Monorepo for Client, Express Server, and Python AI Service",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -c \"cyan,magenta,yellow\" -n \"SERVER,CLIENT,AI_SVC\" \"npm --prefix server run dev\" \"npm --prefix Client run dev\" \"npm --prefix ai-service run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix Client run dev",
+    "dev:ai": "npm --prefix ai-service run dev",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
