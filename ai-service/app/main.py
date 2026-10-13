@@ -32,10 +32,27 @@ app = FastAPI(
     title=settings.SERVICE_NAME,
     version=settings.VERSION,
     description="Python FastAPI Microservice for Royal Rudraksh Palace AI & RAG Capabilities",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,
+    redoc_url=None,
     lifespan=lifespan
 )
+
+# Middleware to limit JSON response size (e.g., truncate large responses)
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+class ResponseSizeLimiter(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        # If response is JSON and larger than 1MB, truncate it
+        if isinstance(response, JSONResponse):
+            body = b"".join([chunk async for chunk in response.body_iterator])
+            max_bytes = 1_000_000  # 1 MB
+            if len(body) > max_bytes:
+                return JSONResponse(content={"detail": "Response truncated due to size limit."}, status_code=413)
+        return response
+
+app.add_middleware(ResponseSizeLimiter)
 
 # CORS Middleware Setup
 app.add_middleware(
